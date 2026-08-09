@@ -12,4 +12,4 @@ export const firebaseConfig = {
 
 export const ADMIN_USERNAME = "nkseza2000";
 export const ADMIN_AUTH_EMAIL = "nkseza2000@nangrong-exam.invalid";
-export const ADMIN_UID = "NOy0qe3lgLbgvoVhuxHBeq7ZVYs2";
+export const ADMIN_UID = "rUqdxRSL8RPu1lE1IhhOvDTAQoj1";
