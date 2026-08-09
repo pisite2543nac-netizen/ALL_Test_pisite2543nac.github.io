@@ -60,14 +60,14 @@ $('loginBtn').onclick = async () => {
 
   try {
     await signInWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, password);
-  } catch (e) {
-    console.error('Admin login error:', e);
-    $('loginMsg').textContent =
-      'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือบัญชี Admin ใน Firebase Authentication ไม่ตรงกับการตั้งค่า';
-    $('loginMsg').classList.remove('hidden');
-  } finally {
-    $('loginBtn').disabled = false;
-  }
+ } catch (e) {
+  console.error('Admin login error:', e);
+
+  $('loginMsg').textContent =
+    `Firebase Error: ${e.code || 'unknown'} | ${e.message || ''}`;
+
+  $('loginMsg').classList.remove('hidden');
+}
 };
 
 $('logoutBtn').onclick = () => signOut(auth);
