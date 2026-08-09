@@ -1,7 +1,7 @@
 // Firebase Web App configuration — Nangrong Exam Web
 // การรักษาความปลอดภัยข้อมูลควบคุมด้วย Firebase Authentication + Firestore Security Rules
 export const firebaseConfig = {
-  apiKey: "AIzaSyDS6053SYD8nAqYN3lu9YVT1UbKobIRx00",
+  apiKey: "AIzaSyDS6O53SYD8nAqYN3lu9YVT1UbKobIRx00",
   authDomain: "nangrong-exam-web.firebaseapp.com",
   projectId: "nangrong-exam-web",
   storageBucket: "nangrong-exam-web.firebasestorage.app",
