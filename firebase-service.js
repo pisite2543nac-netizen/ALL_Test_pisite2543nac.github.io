@@ -1,0 +1,14 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+export function isFirebaseConfigured(){
+  return firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE_') &&
+         firebaseConfig.projectId && !firebaseConfig.projectId.startsWith('PASTE_');
+}
+
+if(!isFirebaseConfigured()) console.warn('Firebase ยังไม่ได้ตั้งค่าใน firebase-config.js');
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);

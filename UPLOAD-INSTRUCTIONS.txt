@@ -1,0 +1,16 @@
+อัปโหลดไฟล์ index.html, admin.html, *.js, styles.css ไปที่ ROOT ของ GitHub repository เดิม
+
+GitHub Pages:
+Settings > Pages > Deploy from a branch > main > /(root)
+
+สำคัญ: firestore.rules ไม่ได้ทำงานจาก GitHub โดยอัตโนมัติ
+ต้องเปิด Firebase Console > Firestore Database > Rules
+แล้วคัดลอกเนื้อหา firestore.rules ทั้งหมดไปวางและกด Publish
+
+หลัง Publish Rules:
+1) เปิด admin.html
+2) Login Username: nkseza2000
+3) ใช้รหัสผ่าน Admin ที่ตั้งไว้ใน Firebase Authentication
+4) นำเข้าไฟล์ initial-question-bank.json จากชุด Private/Admin Setup
+
+ห้ามอัปโหลด initial-question-bank.json ไป GitHub Public เพราะมีเฉลย
