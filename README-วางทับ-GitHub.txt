@@ -118,3 +118,17 @@ ADMIN QUESTION + USER MANAGER
 - ผลสอบ submissions เดิมจะไม่ถูกลบ เพื่อเก็บเป็นหลักฐาน
 - Firebase Authentication credential ภายในยังคงอยู่ เพราะการลบ Auth ของผู้ใช้อื่นแบบถาวรต้องใช้ Firebase Admin SDK / Cloud Function
 - หลังโปรไฟล์ studentUsers ถูกลบ User จะ Login ผ่าน Auth ได้แต่ระบบจะไม่อนุญาตให้เข้าใช้งานข้อสอบเพราะไม่มีโปรไฟล์
+
+
+PRE-EXAM INSTRUCTION PAGE
+หลัง Student กรอก Code รายวิชาถูกต้อง:
+1. ระบบโหลดข้อสอบ
+2. ยังไม่เริ่ม Timer และยังไม่เข้า Fullscreen
+3. แสดงหน้าคำชี้แจงก่อนสอบ
+4. แสดงชื่อผู้สอบและรายวิชา
+5. อธิบาย 50 ข้อ / 75 นาที / การสุ่ม / การส่งข้อสอบ
+6. อธิบาย Anti-Cheat: เปลี่ยน Tab, ออกจาก Fullscreen, Copy/Cut/Paste/คลิกขวา และเกณฑ์ 3 ครั้ง
+7. อธิบายสถานะรับเฉลยของ User
+8. Student ต้องติ๊กยอมรับคำชี้แจงก่อน ปุ่ม “เริ่มทำข้อสอบ” จึงกดได้
+9. เมื่อกดเริ่มจริง จึงสร้าง Registration/Attempt, เข้า Fullscreen และเริ่มนับเวลา
+10. Student สามารถกดกลับไปเลือกวิชาได้ก่อนเริ่มสอบ

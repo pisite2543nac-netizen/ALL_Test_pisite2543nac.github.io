@@ -43,7 +43,7 @@ function showRegister(){
   $('showRegisterBtn').classList.add('active');
 }
 function showAuthHome(){
-  ['screen-subject','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
+  ['screen-subject','screen-instructions','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
   $('screen-auth').classList.remove('hidden');
   $('pendingRevealShortcut')?.classList.add('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -52,6 +52,7 @@ function showSubjectHome(){
   if(!student){showAuthHome();return}
   $('screen-auth').classList.add('hidden');
   $('screen-done').classList.add('hidden');
+  $('screen-instructions')?.classList.add('hidden');
   $('screen-exam').classList.add('hidden');
   $('screen-subject').classList.remove('hidden');
   $('studentSummary').innerHTML=`
@@ -329,7 +330,7 @@ async function unlockAndStart(s){
   if(startingExam) return;
   if(!student){
     $('screen-subject').classList.add('hidden');
-    $('screen-register').classList.remove('hidden');
+    $('screen-auth').classList.remove('hidden');
     return;
   }
 
@@ -351,23 +352,91 @@ async function unlockAndStart(s){
   startingExam=true;
   selectedSubject=s;
   applyTheme(s.theme);
-  subjectMessage(s,'รหัสถูกต้อง กำลังเข้าสู่ข้อสอบ...',true);
-
+  subjectMessage(s,'รหัสถูกต้อง กำลังเตรียมคำชี้แจงก่อนสอบ...',true);
   document.querySelectorAll('.subject-start').forEach(b=>b.disabled=true);
 
   try{
+    // โหลดข้อสอบไว้ก่อน แต่ยังไม่เริ่มจับเวลาและยังไม่สร้าง attempt
     questions=await fetchExam();
-    registrationId=await registerAttempt();
-    await updateStudentCheckinForSubject();
   }catch(e){
     console.error(e);
     startingExam=false;
     document.querySelectorAll('.subject-start').forEach(b=>b.disabled=false);
     if(e?.code==='permission-denied'){
-      subjectMessage(s,'ลงทะเบียนรายวิชาไม่สำเร็จ: Firestore Rules หรือสิทธิ์ฐานข้อมูลไม่ตรงกับระบบ');
+      subjectMessage(s,'ไม่สามารถโหลดข้อสอบได้: Firestore Rules หรือสิทธิ์ฐานข้อมูลไม่ตรงกับระบบ');
       return;
     }
-    subjectMessage(s,e?.message||'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่');
+    subjectMessage(s,e?.message||'ไม่สามารถโหลดข้อสอบได้ กรุณาลองใหม่');
+    return;
+  }
+
+  startingExam=false;
+  showPreExamInstructions();
+}
+
+function showPreExamInstructions(){
+  if(!student||!selectedSubject)return showSubjectHome();
+
+  $('screen-subject').classList.add('hidden');
+  $('screen-exam').classList.add('hidden');
+  $('screen-done').classList.add('hidden');
+  $('screen-instructions').classList.remove('hidden');
+
+  $('instructionSubjectName').textContent=`${selectedSubject.code} · ${selectedSubject.name}`;
+  $('instructionStudent').innerHTML=`
+    <b>${escapeHtml(student.name)}</b>
+    <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
+    <span>${escapeHtml(student.className)}</span>
+    <span>${escapeHtml(student.department)}</span>
+  `;
+
+  $('instructionRevealInfo').innerHTML=wantsKey
+    ? '<b>การรับเฉลย:</b> คุณเลือก “รับเฉลย” หลังส่งข้อสอบต้องรอ 30 นาทีจึงเปิดดูเฉลยได้ และเฉลยจะอยู่ให้ดูได้ 24 ชั่วโมงหลังเปิด'
+    : '<b>การรับเฉลย:</b> คุณเลือก “ไม่รับเฉลย” ระบบจะไม่เปิดเฉลยหลังส่งข้อสอบ';
+
+  $('instructionAccept').checked=false;
+  $('instructionStartBtn').disabled=true;
+  $('instructionMsg').classList.add('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function backFromInstructions(){
+  if(active)return;
+  selectedSubject=null;
+  questions=[];
+  startingExam=false;
+  $('instructionAccept').checked=false;
+  document.querySelectorAll('.subject-start').forEach(b=>b.disabled=false);
+  showSubjectHome();
+}
+
+async function beginExamFromInstructions(){
+  if(startingExam||active)return;
+
+  if(!$('instructionAccept').checked){
+    showMsg('instructionMsg','กรุณาติ๊กยืนยันว่าได้อ่านและเข้าใจคำชี้แจงก่อนเริ่มสอบ');
+    return;
+  }
+
+  hideMsg('instructionMsg');
+  startingExam=true;
+  $('instructionStartBtn').disabled=true;
+  $('instructionBackBtn').disabled=true;
+
+  try{
+    // สร้างสิทธิ์การสอบเมื่อผู้เรียนกดเริ่มจริง
+    registrationId=await registerAttempt();
+    await updateStudentCheckinForSubject();
+  }catch(e){
+    console.error(e);
+    startingExam=false;
+    $('instructionStartBtn').disabled=false;
+    $('instructionBackBtn').disabled=false;
+    if(e?.code==='permission-denied'){
+      showMsg('instructionMsg','เริ่มสอบไม่สำเร็จ: Firestore Rules หรือสิทธิ์ฐานข้อมูลไม่ตรงกับระบบ');
+      return;
+    }
+    showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');
     return;
   }
 
@@ -378,7 +447,7 @@ async function unlockAndStart(s){
   violations=0;
   $('violations').textContent='0';
 
-  $('screen-subject').classList.add('hidden');
+  $('screen-instructions').classList.add('hidden');
   $('screen-exam').classList.remove('hidden');
   $('examSubjectMini').textContent=`${selectedSubject.code} · ${selectedSubject.name}`;
 
@@ -386,6 +455,7 @@ async function unlockAndStart(s){
   buildWatermark();
   active=true;
   startingExam=false;
+  $('instructionBackBtn').disabled=false;
 
   try{await document.documentElement.requestFullscreen?.()}catch{}
   render();
@@ -679,7 +749,7 @@ function updatePendingRevealShortcut(){
 }
 
 function hideAllStudentScreens(){
-  ['screen-register','screen-subject','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
+  ['screen-register','screen-subject','screen-instructions','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
 }
 
 function goStudentHome(){
@@ -809,6 +879,13 @@ $('backHomeBtn').onclick=showAuthHome;
 $('anotherSubjectBtn').onclick=showSubjectHome;
 $('logoutStudentBtn').onclick=logoutUser;
 $('openPendingRevealBtn').onclick=openPendingReveal;
+$('instructionAccept').addEventListener('change',()=>{
+  $('instructionStartBtn').disabled=!$('instructionAccept').checked;
+  if($('instructionAccept').checked)hideMsg('instructionMsg');
+});
+$('instructionStartBtn').onclick=beginExamFromInstructions;
+$('instructionBackBtn').onclick=backFromInstructions;
+
 
 document.querySelectorAll('.password-toggle').forEach(btn=>{
   btn.onclick=()=>{

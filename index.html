@@ -169,6 +169,74 @@
   <div id="subjectGrid" class="subject-grid"></div>
 </section>
 
+
+<section id="screen-instructions" class="card hidden pre-exam-card">
+  <div class="header">
+    <div class="brand">
+      <div class="kicker">PRE-EXAM INSTRUCTIONS</div>
+      <h1>คำชี้แจงก่อนเริ่มทำข้อสอบ</h1>
+      <p>กรุณาอ่านรายละเอียดให้ครบก่อนกดเริ่มทำข้อสอบ เมื่อเริ่มแล้วเวลาจะนับถอยหลังทันที</p>
+    </div>
+    <button id="instructionBackBtn" class="btn secondary small" type="button">← กลับไปเลือกวิชา</button>
+  </div>
+
+  <div id="instructionStudent" class="student-preview"></div>
+
+  <div class="instruction-subject">
+    <div class="muted">รายวิชาที่กำลังจะสอบ</div>
+    <h2 id="instructionSubjectName">-</h2>
+  </div>
+
+  <div class="instruction-grid">
+    <div class="instruction-box">
+      <div class="instruction-icon">📝</div>
+      <b>จำนวนข้อสอบ</b>
+      <span>จำนวน 50 ข้อ แบบปรนัย 4 ตัวเลือก</span>
+    </div>
+    <div class="instruction-box">
+      <div class="instruction-icon">⏱️</div>
+      <b>เวลาสอบ</b>
+      <span>75 นาที เมื่อกด “เริ่มทำข้อสอบ” เวลาจะเริ่มนับทันที</span>
+    </div>
+    <div class="instruction-box">
+      <div class="instruction-icon">🔀</div>
+      <b>การสุ่มข้อสอบ</b>
+      <span>ระบบสุ่มลำดับคำถามและลำดับตัวเลือกของแต่ละคน</span>
+    </div>
+    <div class="instruction-box">
+      <div class="instruction-icon">✅</div>
+      <b>การส่งข้อสอบ</b>
+      <span>ตรวจคำตอบให้ครบก่อนส่ง เมื่อส่งแล้วไม่สามารถกลับมาแก้คำตอบได้</span>
+    </div>
+  </div>
+
+  <div class="instruction-rules">
+    <h3>ข้อปฏิบัติระหว่างสอบ</h3>
+    <ol>
+      <li>ทำข้อสอบด้วยตนเอง และไม่เปิดเว็บไซต์หรือโปรแกรมอื่นระหว่างสอบ</li>
+      <li>ห้ามเปลี่ยน Tab / Window, ออกจาก Fullscreen, Copy, Cut, Paste หรือคลิกขวาระหว่างสอบ</li>
+      <li>ระบบจะบันทึกพฤติกรรมต้องสงสัย หากเกิน 3 ครั้ง ระบบสามารถยุติการสอบได้</li>
+      <li>ห้าม Refresh หรือปิดหน้าเว็บระหว่างทำข้อสอบ เพราะอาจทำให้การสอบสะดุดหรือข้อมูลคำตอบสูญหาย</li>
+      <li>หากหมดเวลา ระบบสามารถส่งคำตอบที่มีอยู่โดยอัตโนมัติ</li>
+      <li>คะแนนสอบจะไม่แสดงในหน้าของนักศึกษา คะแนนจะแสดงในหน้า Admin เท่านั้น</li>
+    </ol>
+  </div>
+
+  <div id="instructionRevealInfo" class="notice instruction-reveal-info"></div>
+
+  <label class="terms instruction-accept">
+    <input type="checkbox" id="instructionAccept">
+    <span>ฉันได้อ่านและเข้าใจคำชี้แจงทั้งหมดแล้ว และยอมรับเงื่อนไขการสอบ</span>
+  </label>
+
+  <div id="instructionMsg" class="error hidden"></div>
+
+  <div class="row space topgap instruction-actions">
+    <span class="muted">เมื่อกดเริ่มสอบ ระบบจะเข้าสู่ Fullscreen และเริ่มจับเวลา 75 นาที</span>
+    <button id="instructionStartBtn" class="btn ok" type="button" disabled>เริ่มทำข้อสอบ</button>
+  </div>
+</section>
+
 <section id="screen-exam" class="hidden">
   <div class="exam-layout">
     <aside class="card side">

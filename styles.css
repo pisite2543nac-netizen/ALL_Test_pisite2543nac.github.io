@@ -580,3 +580,82 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 #questionSubjectRows .row{
   flex-wrap:wrap;
 }
+
+
+/* =========================================================
+   PRE-EXAM INSTRUCTIONS
+   ========================================================= */
+.pre-exam-card{
+  max-width:1080px;
+  margin:28px auto;
+}
+.instruction-subject{
+  margin:16px 0;
+  padding:18px 20px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(255,255,255,.045);
+}
+.instruction-subject h2{
+  margin:5px 0 0;
+}
+.instruction-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin:16px 0;
+}
+.instruction-box{
+  min-height:145px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+.instruction-box b{
+  font-size:1.05rem;
+}
+.instruction-box span{
+  line-height:1.55;
+}
+.instruction-icon{
+  font-size:1.65rem;
+}
+.instruction-rules{
+  margin:18px 0;
+  padding:20px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(0,0,0,.14);
+}
+.instruction-rules h3{
+  margin-top:0;
+}
+.instruction-rules li{
+  margin:8px 0;
+  line-height:1.6;
+}
+.instruction-reveal-info{
+  margin:16px 0;
+}
+.instruction-accept{
+  margin-top:16px;
+  padding:16px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+}
+.instruction-actions{
+  align-items:center;
+}
+@media (max-width:900px){
+  .instruction-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:580px){
+  .instruction-grid{grid-template-columns:1fr}
+  .instruction-actions{align-items:stretch}
+  .instruction-actions .btn{width:100%}
+}
