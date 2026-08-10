@@ -128,7 +128,29 @@
       <div class="grid two">
         <div class="field"><label>เลขนักศึกษา</label><input id="newStudentId"></div>
         <div class="field"><label>ชื่อ-นามสกุล</label><input id="newStudentName"></div>
-        <div class="field"><label>ชั้น / ห้อง</label><input id="newStudentClass" placeholder="เช่น ปวช.2/1"></div>
+        <div class="field"><label>ระดับชั้น</label>
+          <select id="newStudentClassLevel">
+            <option value="">-- เลือกระดับชั้น --</option>
+            <option value="ปวส.1">ปวส.1</option>
+            <option value="ปวส.2">ปวส.2</option>
+            <option value="ปวส.3">ปวส.3</option>
+            <option value="ปวช.1">ปวช.1</option>
+            <option value="ปวช.2">ปวช.2</option>
+            <option value="ปวช.3">ปวช.3</option>
+            <option value="ปวช.4">ปวช.4</option>
+          </select>
+        </div>
+        <div class="field"><label>ห้อง / กลุ่ม</label>
+          <select id="newStudentClassRoom">
+            <option value="">-- เลือกห้อง --</option>
+            <option value="/1">/1</option>
+            <option value="/2">/2</option>
+            <option value="/3">/3</option>
+            <option value="/4">/4</option>
+            <option value="/5">/5</option>
+            <option value="/6">/6</option>
+          </select>
+        </div>
         <div class="field"><label>แผนกวิชา</label><input id="newStudentDept"></div>
         <div class="field"><label>รหัสผ่านเริ่มต้นของ User</label><input id="newStudentPassword" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
         <div class="field"><label>กำหนดรายวิชา (ไม่บังคับ)</label><select id="newStudentSubject"></select></div>

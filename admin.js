@@ -260,11 +260,14 @@ $('toggleAddUser').onclick=()=>$('addUserPanel').classList.toggle('hidden');
 $('cancelAddUser').onclick=()=>$('addUserPanel').classList.add('hidden');
 $('saveNewUser').onclick=async()=>{
   $('addUserMsg').classList.add('hidden');
-  const studentId=norm($('newStudentId').value),name=norm($('newStudentName').value),className=norm($('newStudentClass').value),department=norm($('newStudentDept').value);
+  const studentId=norm($('newStudentId').value),name=norm($('newStudentName').value);
+  const classLevel=norm($('newStudentClassLevel').value),classRoom=norm($('newStudentClassRoom').value);
+  const className=classLevel && classRoom ? `${classLevel}${classRoom}` : '';
+  const department=norm($('newStudentDept').value);
   const password=$('newStudentPassword').value;
   const subjectId=$('newStudentSubject').value,status=$('newStudentStatus').value;
   if(!studentId||!name||!className||!department){
-    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ ชั้น/ห้อง และแผนกให้ครบ';$('addUserMsg').classList.remove('hidden');return;
+    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ เลือกระดับชั้น และแผนกให้ครบ';$('addUserMsg').classList.remove('hidden');return;
   }
   if(!/^\d+$/.test(studentId)){
     $('addUserMsg').textContent='เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น';$('addUserMsg').classList.remove('hidden');return;
@@ -286,7 +289,7 @@ $('saveNewUser').onclick=async()=>{
       wantsKey:true,createdByAdmin:true,registeredAt:serverTimestamp(),registeredAtClient:new Date().toISOString()
     });
     await signOut(provisionAuth);
-    ['newStudentId','newStudentName','newStudentClass','newStudentDept','newStudentPassword'].forEach(id=>$(id).value='');
+    ['newStudentId','newStudentName','newStudentClassLevel','newStudentClassRoom','newStudentDept','newStudentPassword'].forEach(id=>$(id).value='');
     $('newStudentSubject').value='';$('newStudentStatus').value='registered';$('addUserPanel').classList.add('hidden');
     alert(`สร้าง User ${studentId} สำเร็จ`);
   }catch(e){

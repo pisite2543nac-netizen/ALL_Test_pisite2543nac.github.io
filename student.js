@@ -112,14 +112,16 @@ async function registerUser(){
 
   const studentId=normalize($('studentId').value);
   const name=normalize($('name').value);
-  const className=normalize($('className').value);
+  const classLevel=normalize($('classLevel').value);
+  const classRoom=normalize($('classRoom').value);
+  const className=classLevel && classRoom ? `${classLevel}${classRoom}` : '';
   const department=normalize($('department').value);
   const password=$('registerPassword').value;
   const password2=$('registerPassword2').value;
   wantsKey=(document.querySelector('input[name="wantKey"]:checked')?.value||'yes')==='yes';
 
   if(!studentId||!name||!className||!department){
-    showMsg('registerMsg','กรุณากรอกข้อมูลผู้เข้าสอบให้ครบถ้วน');return
+    showMsg('registerMsg','กรุณากรอกข้อมูลผู้เข้าสอบและเลือกระดับชั้นให้ครบถ้วน');return
   }
   if(!validStudentId(studentId)){
     showMsg('registerMsg','เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น');return
