@@ -7,7 +7,7 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-aut
 import { collection, getDocs, doc, deleteDoc, writeBatch, serverTimestamp, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);
-let questionRows=[],answerMap=new Map(),editId=null,lastRegs=[],lastSubs=[],liveUnsubs=[],bankEnsured=false;
+let questionRows=[],answerMap=new Map(),editId=null,lastRegs=[],lastSubs=[],lastStudentUsers=[],liveUnsubs=[],bankEnsured=false;
 const provisionApp=initializeApp(firebaseConfig,'nangrongProvisionApp');
 const provisionAuth=getAuth(provisionApp);
 const studentEmail=id=>`${id}@student.nangrong.invalid`;
@@ -109,6 +109,10 @@ function startLive(){
     lastRegs=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderRealtimeAreas();
   },e=>console.warn('studentCheckins live error',e)));
+  liveUnsubs.push(onSnapshot(collection(db,'studentUsers'),snap=>{
+    lastStudentUsers=snap.docs.map(d=>({uid:d.id,...d.data()}));
+    renderRealtimeAreas();
+  },e=>console.warn('studentUsers live error',e)));
   liveUnsubs.push(onSnapshot(collection(db,'submissions'),snap=>{
     lastSubs=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderRealtimeAreas();
@@ -121,6 +125,7 @@ function renderRealtimeAreas(){
   renderDashboard();
   renderRegs();
   renderResults();
+  renderQuestionSubjectManager();
 }
 
 $('loginBtn').onclick=async()=>{
@@ -151,15 +156,17 @@ onAuthStateChanged(auth,async user=>{
 });
 
 async function fetchAll(){
-  const [q,a,r,s]=await Promise.all([
+  const [q,a,r,s,u]=await Promise.all([
     getDocs(collection(db,'questions')),getDocs(collection(db,'answerKeys')),
-    getDocs(collection(db,'studentCheckins')),getDocs(collection(db,'submissions'))
+    getDocs(collection(db,'studentCheckins')),getDocs(collection(db,'submissions')),
+    getDocs(collection(db,'studentUsers'))
   ]);
   questionRows=q.docs.map(d=>({id:d.id,...d.data()}));
   answerMap=new Map(a.docs.map(d=>[d.id,d.data()]));
   lastRegs=r.docs.map(d=>({id:d.id,...d.data()}));
   lastSubs=s.docs.map(d=>({id:d.id,...d.data()}));
-  return {questions:questionRows,registrations:lastRegs,submissions:lastSubs};
+  lastStudentUsers=u.docs.map(d=>({uid:d.id,...d.data()}));
+  return {questions:questionRows,registrations:lastRegs,submissions:lastSubs,studentUsers:lastStudentUsers};
 }
 function scoreOf(s){
   let correct=0;
@@ -183,7 +190,7 @@ async function renderAll(){
     await fetchAll();
     fillClassSelect($('regClassFilter'),lastRegs);
     fillClassSelect($('resultClassFilter'),lastSubs);
-    updateMetrics();renderDashboard();renderResults();renderRegs();renderQuestions();
+    updateMetrics();renderDashboard();renderResults();renderRegs();renderQuestionSubjectManager();renderQuestions();
   }catch(e){
     console.error(e);
     alert('อ่านข้อมูลจาก Firebase ไม่สำเร็จ กรุณาตรวจสอบ Firestore Rules');
@@ -250,10 +257,42 @@ function renderRegs(){
   rows.forEach(r=>{
     const tr=document.createElement('tr');
     const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
-    tr.innerHTML=`<td>${fmtDate(r.registeredAt||r.registeredAtClient)}</td><td>${esc(subject)}</td><td>${esc(r.studentId)}</td><td>${esc(r.name)}</td><td>${esc(r.className)}</td><td>${esc(r.department)}</td><td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td><td><button class="btn danger small">ลบ</button></td>`;
-    tr.querySelector('button').onclick=async()=>{if(confirm(`ลบ User ${r.name||r.studentId} ออกจากรายชื่อ?`))await deleteDoc(doc(db,'studentCheckins',r.id))};
+    tr.innerHTML=`<td>${fmtDate(r.registeredAt||r.registeredAtClient)}</td><td>${esc(subject)}</td><td>${esc(r.studentId)}</td><td>${esc(r.name)}</td><td>${esc(r.className)}</td><td>${esc(r.department)}</td><td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td><td><button class="btn danger small">ลบ User</button></td>`;
+    tr.querySelector('button').onclick=async()=>deleteUserFromSystem(r);
     tb.appendChild(tr);
   });
+}
+
+async function deleteUserFromSystem(r){
+  const ownerUid=r.ownerUid || lastStudentUsers.find(u=>u.studentId===r.studentId)?.uid || '';
+  const label=r.name||r.studentId;
+  if(!confirm(`ลบ User ${label} ออกจากระบบ?\\n\\nUser นี้จะเข้าใช้งานระบบสอบไม่ได้อีก แต่ผลสอบเดิมจะยังถูกเก็บไว้`))return;
+
+  try{
+    const checkins=lastRegs.filter(x=>
+      (ownerUid && x.ownerUid===ownerUid) ||
+      (!ownerUid && x.studentId===r.studentId)
+    );
+
+    for(let i=0;i<checkins.length;i+=300){
+      const b=writeBatch(db);
+      checkins.slice(i,i+300).forEach(x=>b.delete(doc(db,'studentCheckins',x.id)));
+      await b.commit();
+    }
+
+    if(ownerUid){
+      await deleteDoc(doc(db,'studentUsers',ownerUid));
+    }else{
+      const profile=lastStudentUsers.find(u=>u.studentId===r.studentId);
+      if(profile)await deleteDoc(doc(db,'studentUsers',profile.uid));
+    }
+
+    alert(`ลบ User ${label} ออกจากระบบแล้ว\\nผลสอบเดิมยังคงอยู่`);
+    await renderAll();
+  }catch(e){
+    console.error(e);
+    alert('ลบ User ไม่สำเร็จ: '+(e.message||e));
+  }
 }
 
 $('toggleAddUser').onclick=()=>$('addUserPanel').classList.toggle('hidden');
@@ -301,16 +340,89 @@ $('saveNewUser').onclick=async()=>{
   }finally{$('saveNewUser').disabled=false}
 };
 
+function renderQuestionSubjectManager(){
+  const tb=$('questionSubjectRows');
+  if(!tb)return;
+  tb.innerHTML='';
+  SUBJECTS.forEach(s=>{
+    const qs=questionRows.filter(q=>q.subjectId===s.id&&q.active!==false)
+      .sort((a,b)=>(a.order||0)-(b.order||0));
+    const tr=document.createElement('tr');
+    const status=qs.length===50?'ครบ 50 ข้อ':(qs.length<50?`ขาด ${50-qs.length} ข้อ`:`เกิน ${qs.length-50} ข้อ`);
+    tr.innerHTML=`
+      <td><b>${esc(s.code)}</b></td>
+      <td>${esc(s.name)}</td>
+      <td><b>${qs.length}</b> <span class="muted">(${status})</span></td>
+      <td>
+        <div class="row">
+          <button class="btn small add-one">+ เพิ่มข้อ</button>
+          <button class="btn secondary small inspect">ตรวจข้อสอบ/เฉลย</button>
+          <button class="btn danger small remove-one" ${qs.length===0?'disabled':''}>− ลด 1 ข้อ</button>
+        </div>
+      </td>`;
+    tr.querySelector('.add-one').onclick=()=>{
+      $('qSubject').value=s.id;
+      clearQForm();
+      $('qSubject').value=s.id;
+      $('qText').focus();
+      scrollTo({top:$('tab-questions').offsetTop+220,behavior:'smooth'});
+    };
+    tr.querySelector('.inspect').onclick=()=>{
+      $('questionSubjectFilter').value=s.id;
+      renderQuestions();
+      scrollTo({top:$('questionList').offsetTop-80,behavior:'smooth'});
+    };
+    tr.querySelector('.remove-one').onclick=async()=>{
+      if(!qs.length)return;
+      const q=qs[qs.length-1];
+      if(!confirm(`ลดข้อสอบวิชา ${s.code} ลง 1 ข้อ?\\n\\nจะลบข้อสุดท้าย:\\n${q.q}`))return;
+      const b=writeBatch(db);
+      b.delete(doc(db,'questions',q.id));
+      b.delete(doc(db,'answerKeys',q.id));
+      await b.commit();
+      await renderAll();
+    };
+    tb.appendChild(tr);
+  });
+}
+
 function renderQuestions(){
   const f=$('questionSubjectFilter').value,list=$('questionList');list.innerHTML='';
-  questionRows.filter(q=>!f||q.subjectId===f)
-    .sort((a,b)=>(a.subjectCode||'').localeCompare(b.subjectCode||'')||(a.order||0)-(b.order||0))
-    .forEach(q=>{
+  const rows=questionRows.filter(q=>!f||q.subjectId===f)
+    .sort((a,b)=>(a.subjectCode||'').localeCompare(b.subjectCode||'')||(a.order||0)-(b.order||0));
+
+  if($('questionVisibleCount'))$('questionVisibleCount').textContent=`${rows.length} ข้อ`;
+
+  if(!rows.length){
+    list.innerHTML='<div class="notice">ยังไม่มีข้อสอบในรายวิชานี้</div>';
+    return;
+  }
+
+  rows.forEach((q,idx)=>{
+      const key=answerMap.get(q.id)||{};
+      const correct=Number(key.correct);
+      const answerText=(q.options||[])[correct]??'-';
+      const thaiChoice=['ก','ข','ค','ง'][correct]||'-';
       const d=document.createElement('div');d.className='admin-question';
-      d.innerHTML=`<div class="qtitle"><span class="pill">${esc(q.subjectCode||'')}</span> ${esc(q.q)}</div><ol type="A">${(q.options||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ol><div class="row"><button class="btn secondary small edit">แก้ไข</button><button class="btn danger small del">ลบข้อนี้</button></div>`;
+      d.innerHTML=`
+        <div class="qtitle">
+          <span class="pill">${esc(q.subjectCode||'')}</span>
+          <span class="pill">${idx+1}</span>
+          ${esc(q.q)}
+        </div>
+        <ol type="A">${(q.options||[]).map((o,i)=>`<li class="${i===correct?'correct-choice':''}">${esc(o)}${i===correct?' <b>✓ คำตอบที่ถูก</b>':''}</li>`).join('')}</ol>
+        <div class="answer-review">
+          <div><b>เฉลย:</b> ${thaiChoice}. ${esc(answerText)}</div>
+          <div><b>คำอธิบาย:</b> ${esc(key.explain||'ยังไม่มีคำอธิบาย')}</div>
+          <div class="muted"><b>ระดับ:</b> ${esc(q.level||'-')} · ID: ${esc(q.id)}</div>
+        </div>
+        <div class="row topgap">
+          <button class="btn secondary small edit">แก้ไข</button>
+          <button class="btn danger small del">ลบข้อนี้</button>
+        </div>`;
       d.querySelector('.edit').onclick=()=>editQ(q.id);
       d.querySelector('.del').onclick=async()=>{
-        if(confirm('ลบข้อสอบข้อนี้?')){
+        if(confirm('ลบข้อสอบข้อนี้พร้อมเฉลย?')){
           const b=writeBatch(db);b.delete(doc(db,'questions',q.id));b.delete(doc(db,'answerKeys',q.id));await b.commit();await renderAll();
         }
       };
@@ -319,18 +431,19 @@ function renderQuestions(){
 }
 function editQ(id){
   const q=questionRows.find(x=>x.id===id),key=answerMap.get(id)||{};editId=id;
-  $('qSubject').value=q.subjectId;$('qText').value=q.q;$('qCorrect').value=String(key.correct??0);
+  $('qSubject').value=q.subjectId;$('qText').value=q.q;$('qCorrect').value=String(key.correct??0);$('qLevel').value=q.level||'easy';
   (q.options||[]).forEach((o,j)=>$(`o${j}`).value=o);$('qExplain').value=key.explain||'';
   $('saveQuestion').textContent='บันทึกการแก้ไข';$('cancelEdit').classList.remove('hidden');
   scrollTo({top:$('tab-questions').offsetTop-20,behavior:'smooth'});
 }
 function clearQForm(){
   editId=null;['qText','o0','o1','o2','o3','qExplain'].forEach(id=>$(id).value='');
-  $('qCorrect').value='0';$('saveQuestion').textContent='เพิ่มข้อสอบ';$('cancelEdit').classList.add('hidden');$('qMsg').classList.add('hidden');
+  $('qCorrect').value='0';$('qLevel').value='easy';$('saveQuestion').textContent='เพิ่มข้อสอบ';$('cancelEdit').classList.add('hidden');$('qMsg').classList.add('hidden');
 }
 $('saveQuestion').onclick=async()=>{
   const subj=subjectById($('qSubject').value);
-  const q={subjectId:subj.id,subjectCode:subj.code,subjectName:subj.name,theme:subj.theme,q:norm($('qText').value),options:[0,1,2,3].map(i=>norm($(`o${i}`).value)),active:true,updatedAt:serverTimestamp()};
+  const nextOrder=editId?(questionRows.find(x=>x.id===editId)?.order||0):(questionRows.filter(x=>x.subjectId===subj.id).length+1);
+  const q={subjectId:subj.id,subjectCode:subj.code,subjectName:subj.name,theme:subj.theme,q:norm($('qText').value),options:[0,1,2,3].map(i=>norm($(`o${i}`).value)),level:$('qLevel').value,order:nextOrder,active:true,updatedAt:serverTimestamp()};
   const key={correct:Number($('qCorrect').value),explain:norm($('qExplain').value),updatedAt:serverTimestamp()};
   if(!q.q||q.options.some(x=>!x)){$('qMsg').textContent='กรุณากรอกคำถามและตัวเลือกทั้ง 4 ข้อให้ครบ';$('qMsg').classList.remove('hidden');return}
   const id=editId||`${subj.code}-${crypto.randomUUID()}`;

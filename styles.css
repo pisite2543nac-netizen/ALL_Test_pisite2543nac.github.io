@@ -556,3 +556,27 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 #screen-subject .pending-reveal-shortcut b{
   color:#ffe69a;
 }
+
+
+/* Admin question / answer review */
+.answer-review{
+  margin-top:12px;
+  padding:12px 14px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;
+  background:rgba(0,0,0,.16);
+  display:grid;
+  gap:7px;
+}
+.correct-choice{
+  font-weight:700;
+}
+.correct-choice b{
+  margin-left:8px;
+}
+.compact-note{
+  margin:10px 0 14px;
+}
+#questionSubjectRows .row{
+  flex-wrap:wrap;
+}
