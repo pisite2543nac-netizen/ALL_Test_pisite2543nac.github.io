@@ -72,3 +72,132 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 .subject-enter-btn{width:100%;margin-top:2px;background:#fff;color:#081827}
 .subject-enter-btn:hover{filter:brightness(.94)}
 @media(max-width:460px){.subject-code-box{flex-direction:column}.subject-unlock{width:100%}}
+
+
+/* =========================================================
+   EXAM ROOM CODE — หน้าแรกกรอก Code ก่อนเห็นรายวิชา
+   ========================================================= */
+.code-gate-screen{
+  min-height:calc(100vh - 48px);
+  display:grid;
+  place-items:center;
+  padding:28px 12px;
+}
+.code-gate-card{
+  width:min(100%,520px);
+  background:rgba(12,31,51,.97);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:38px 34px 30px;
+  box-shadow:0 24px 70px rgba(0,0,0,.38);
+  text-align:center;
+}
+.code-gate-emblem{
+  width:78px;
+  height:78px;
+  margin:0 auto 18px;
+  border-radius:24px;
+  display:grid;
+  place-items:center;
+  font-size:2.25rem;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:var(--ink);
+  box-shadow:0 14px 34px rgba(39,195,255,.18);
+}
+.code-gate-kicker{
+  color:var(--accent2);
+  font-size:.78rem;
+  letter-spacing:1.5px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+.code-gate-card h1{
+  margin:0;
+  font-size:2rem;
+  color:#fff;
+}
+.code-gate-card>p{
+  color:var(--muted);
+  margin:8px 0 24px;
+}
+.code-gate-field{
+  text-align:left;
+  margin-top:8px;
+}
+.code-gate-field label{
+  display:block;
+  color:#d7e9f6;
+  font-weight:800;
+  margin-bottom:8px;
+}
+.code-gate-field input{
+  width:100%;
+  border:1px solid #315976;
+  background:#071a2a;
+  color:#fff;
+  border-radius:13px;
+  padding:15px 16px;
+  font:inherit;
+  font-size:1.15rem;
+  text-align:center;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  outline:none;
+  -webkit-user-select:text;
+  user-select:text;
+}
+.code-gate-field input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(39,195,255,.14);
+}
+.code-gate-field input::placeholder{
+  color:#7892a8;
+  letter-spacing:.4px;
+}
+.code-gate-btn{
+  width:100%;
+  margin-top:14px;
+  min-height:50px;
+  font-size:1.05rem;
+}
+.code-gate-msg{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:.9rem;
+  font-weight:700;
+}
+.code-gate-msg.bad{
+  color:#ffd7df;
+  background:#431a25;
+  border:1px solid #7a3143;
+}
+.code-gate-msg.ok{
+  color:#d7ffe4;
+  background:#123a27;
+  border:1px solid #2f7550;
+}
+.code-gate-footer{
+  margin-top:25px;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+  color:#b8cad8;
+  font-size:.84rem;
+  line-height:1.6;
+}
+.code-gate-footer span{color:#809caf}
+@media(max-width:560px){
+  .code-gate-screen{padding:14px 4px}
+  .code-gate-card{padding:30px 20px 24px;border-radius:20px}
+  .code-gate-card h1{font-size:1.65rem}
+}
+
+/* หลังผ่าน Code แล้ว การ์ดรายวิชาใช้สำหรับเลือกวิชาเท่านั้น */
+#screen-subject .subject-card{
+  min-height:190px;
+  cursor:pointer;
+}
+#screen-subject .subject-card .subject-enter{
+  margin-top:auto;
+  font-weight:800;
+}

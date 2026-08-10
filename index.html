@@ -10,12 +10,44 @@
 <div id="watermark" class="watermark hidden"></div>
 <main class="container">
 
-<section id="screen-subject" class="card">
+
+<section id="screen-code" class="code-gate-screen">
+  <div class="code-gate-card">
+    <div class="code-gate-emblem" aria-hidden="true">🔐</div>
+    <div class="code-gate-kicker">NANGRONG TECHNICAL COLLEGE</div>
+    <h1>เข้าสู่ห้องสอบออนไลน์</h1>
+    <p>กรอกรหัสเข้าห้องสอบที่ได้รับจากครูผู้สอน</p>
+
+    <div class="code-gate-field">
+      <label for="examRoomCode">รหัสเข้าห้องสอบ</label>
+      <input
+        id="examRoomCode"
+        type="text"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        placeholder="กรอก CODE"
+        maxlength="20"
+      >
+    </div>
+
+    <div id="codeGateMsg" class="code-gate-msg hidden" aria-live="polite"></div>
+
+    <button id="codeGateBtn" class="btn code-gate-btn" type="button">เข้าสู่ระบบ</button>
+
+    <div class="code-gate-footer">
+      วิทยาลัยเทคนิคนางรอง<br>
+      <span>ผู้จัดทำ: นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</span>
+    </div>
+  </div>
+</section>
+
+<section id="screen-subject" class="card hidden">
   <div class="header">
     <div class="brand">
       <div class="kicker">NANGRONG TECHNICAL COLLEGE</div>
       <h1>ระบบสอบออนไลน์ วิทยาลัยเทคนิคนางรอง</h1>
-      <p>เลือกวิชา กรอกรหัสเข้าห้องสอบเพื่อปลดล็อก แล้วจึงลงทะเบียนเข้าสอบ</p>
+      <p>เลือกรายวิชาที่ต้องการสอบ แล้วเข้าสู่หน้าลงทะเบียนนักศึกษา</p>
     </div>
     <a class="btn secondary small" href="admin.html">Admin</a>
   </div>

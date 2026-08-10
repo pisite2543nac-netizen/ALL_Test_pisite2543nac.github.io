@@ -14,17 +14,46 @@ async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEn
 function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function applyTheme(theme){document.body.dataset.theme=theme||''}
 
-let unlockedSubjectId = null;
+let roomCodeVerified = false;
+
+function showCodeGateMessage(message, ok=false){
+  const box=$('codeGateMsg');
+  box.textContent=message;
+  box.classList.remove('hidden','ok','bad');
+  box.classList.add(ok?'ok':'bad');
+}
+
+function verifyExamRoomCode(){
+  const input=$('examRoomCode');
+  const value=normalize(input.value).toUpperCase();
+
+  if(value !== EXAM_ROOM_CODE.toUpperCase()){
+    showCodeGateMessage('รหัสเข้าห้องสอบไม่ถูกต้อง กรุณาตรวจสอบรหัสกับครูผู้สอน');
+    input.focus();
+    input.select();
+    return;
+  }
+
+  roomCodeVerified=true;
+  sessionStorage.setItem('nangrongExamRoomCodeVerified','1');
+  showCodeGateMessage('รหัสถูกต้อง กำลังเข้าสู่หน้ารายวิชา...',true);
+
+  setTimeout(()=>{
+    $('screen-code').classList.add('hidden');
+    $('screen-subject').classList.remove('hidden');
+    renderSubjects();
+    window.scrollTo({top:0,behavior:'smooth'});
+  },250);
+}
 
 function renderSubjects(){
   const g=$('subjectGrid');
   g.innerHTML='';
 
   SUBJECTS.forEach(s=>{
-    const card=document.createElement('div');
+    const card=document.createElement('button');
+    card.type='button';
     card.className=`subject-card theme-${s.theme}`;
-    const unlocked=unlockedSubjectId===s.id;
-
     card.innerHTML=`
       <div class="subject-head">
         <span class="subject-icon">${s.icon}</span>
@@ -32,51 +61,14 @@ function renderSubjects(){
       </div>
       <strong>${escapeHtml(s.name)}</strong>
       <span class="subject-meta">ข้อสอบ 50 ข้อ · คะแนนเต็ม 20 · เวลา 75 นาที</span>
-      <div class="subject-lock">🔒 กรอกรหัสเข้าห้องสอบเพื่อปลดล็อก</div>
-      <div class="subject-code-box">
-        <input class="subject-code-input" type="password" autocomplete="off" inputmode="text"
-          aria-label="รหัสเข้าห้องสอบ ${escapeHtml(s.name)}"
-          placeholder="กรอกรหัสเข้าห้องสอบ" data-subject-id="${s.id}">
-        <button class="btn secondary subject-unlock" type="button">ปลดล็อก</button>
-      </div>
-      <div class="subject-code-msg ${unlocked?'ok':''}" aria-live="polite">
-        ${unlocked?'✓ รหัสถูกต้อง พร้อมเข้าสู่หน้าลงทะเบียน':''}
-      </div>
-      ${unlocked?'<button class="btn subject-enter-btn" type="button">เข้าสู่หน้าลงทะเบียน →</button>':''}
+      <span class="subject-enter">เลือกวิชานี้ →</span>
     `;
-
-    const input=card.querySelector('.subject-code-input');
-    const unlockBtn=card.querySelector('.subject-unlock');
-    const tryUnlock=()=>unlockSubject(s, input, card);
-    unlockBtn.addEventListener('click',tryUnlock);
-    input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tryUnlock();}});
-
-    const enterBtn=card.querySelector('.subject-enter-btn');
-    if(enterBtn) enterBtn.addEventListener('click',()=>chooseSubject(s));
-
+    card.addEventListener('click',()=>chooseSubject(s));
     g.appendChild(card);
   });
 }
 
-function unlockSubject(s,input,card){
-  const msg=card.querySelector('.subject-code-msg');
-  const value=normalize(input.value).toUpperCase();
-  if(value===EXAM_ROOM_CODE.toUpperCase()){
-    unlockedSubjectId=s.id;
-    renderSubjects();
-    const fresh=[...document.querySelectorAll('.subject-card')].find(x=>x.querySelector(`[data-subject-id="${s.id}"]`));
-    fresh?.scrollIntoView({block:'nearest',behavior:'smooth'});
-  }else{
-    msg.classList.remove('ok');
-    msg.classList.add('bad');
-    msg.textContent='รหัสเข้าห้องสอบไม่ถูกต้อง กรุณาตรวจสอบกับครูผู้สอน';
-    input.focus();
-    input.select();
-  }
-}
-
 function chooseSubject(s){
-  if(unlockedSubjectId!==s.id) return;
   selectedSubject=s;applyTheme(s.theme);
   $('subjectTag').textContent=s.tag;
   $('subjectTitle').textContent=s.name;
@@ -159,7 +151,24 @@ async function finish(status='submitted'){
 }
 function violation(){if(!active)return;violations++;$('violations').textContent=violations;if(violations>MAX_VIOLATIONS){finish('terminated').then(()=>$('lockOverlay').classList.remove('hidden'))}}
 
-renderSubjects();
+roomCodeVerified = sessionStorage.getItem('nangrongExamRoomCodeVerified') === '1';
+if(roomCodeVerified){
+  $('screen-code').classList.add('hidden');
+  $('screen-subject').classList.remove('hidden');
+  renderSubjects();
+}else{
+  $('screen-code').classList.remove('hidden');
+  $('screen-subject').classList.add('hidden');
+}
+
+$('codeGateBtn').onclick=verifyExamRoomCode;
+$('examRoomCode').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    verifyExamRoomCode();
+  }
+});
+
 $('backSubjectBtn').onclick=backSubjects;$('startBtn').onclick=start;
 $('prevBtn').onclick=()=>{current=Math.max(0,current-1);render()};$('nextBtn').onclick=()=>{current=Math.min(EXAM_COUNT-1,current+1);render()};
 $('submitBtn').onclick=()=>{if(answers.some(x=>x===-1))return;if(confirm('ยืนยันส่งข้อสอบ? หลังส่งแล้วจะไม่สามารถแก้ไขคำตอบได้'))finish('submitted')};
