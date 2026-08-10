@@ -127,7 +127,7 @@ function renderSubjects(){
       <span class="subject-meta">ข้อสอบ 50 ข้อ · คะแนนเต็ม 20 · เวลา 75 นาที</span>
 
       <div class="subject-code-gate">
-        <label for="subject-code-${s.id}">Code เข้าสอบวิชานี้</label>
+        <label for="subject-code-${s.id}">รหัสล็อกอินเข้าวิชานี้</label>
         <div class="subject-code-row">
           <input
             id="subject-code-${s.id}"
@@ -136,9 +136,9 @@ function renderSubjects(){
             spellcheck="false"
             autocapitalize="characters"
             maxlength="20"
-            placeholder="กรอก CODE"
+            placeholder="กรอกรหัสล็อกอิน"
           >
-          <button class="btn small subject-start" type="button" data-subject="${s.id}">เข้าสู่ข้อสอบ</button>
+          <button class="btn small subject-start" type="button" data-subject="${s.id}">ล็อกอินเข้าสอบ</button>
         </div>
         <div id="subject-msg-${s.id}" class="subject-code-msg hidden"></div>
       </div>
@@ -232,7 +232,7 @@ async function unlockAndStart(s){
   const value=normalize(input.value).toUpperCase();
 
   if(value!==EXAM_ROOM_CODE.toUpperCase()){
-    subjectMessage(s,'Code ไม่ถูกต้อง กรุณาตรวจสอบรหัสกับครูผู้สอน');
+    subjectMessage(s,'รหัสล็อกอินไม่ถูกต้อง กรุณาตรวจสอบรหัสกับครูผู้สอน');
     input.focus();
     input.select();
     return;
@@ -246,7 +246,7 @@ async function unlockAndStart(s){
   startingExam=true;
   selectedSubject=s;
   applyTheme(s.theme);
-  subjectMessage(s,'Code ถูกต้อง กำลังลงทะเบียนรายวิชาและโหลดข้อสอบ...',true);
+  subjectMessage(s,'รหัสถูกต้อง กำลังเข้าสู่ข้อสอบ...',true);
 
   document.querySelectorAll('.subject-start').forEach(b=>b.disabled=true);
 

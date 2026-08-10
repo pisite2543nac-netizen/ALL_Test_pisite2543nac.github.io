@@ -1,56 +1,233 @@
 <!doctype html>
-<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin | วิทยาลัยเทคนิคนางรอง</title><link rel="stylesheet" href="styles.css"></head>
-<body><main class="container">
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Dashboard | วิทยาลัยเทคนิคนางรอง</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<main class="container admin-shell">
+
 <section id="loginCard" class="card login-card">
-  <div class="kicker">ADMINISTRATOR</div><h1>ผู้ดูแลระบบข้อสอบ</h1><p class="muted">วิทยาลัยเทคนิคนางรอง</p>
+  <div class="kicker">ADMINISTRATOR</div>
+  <h1>ผู้ดูแลระบบข้อสอบ</h1>
+  <p class="muted">วิทยาลัยเทคนิคนางรอง</p>
   <div class="field"><label>Username</label><input id="adminUser" autocomplete="username"></div>
   <div class="field topgap"><label>Password</label><input id="adminPass" type="password" autocomplete="current-password"></div>
   <div id="loginMsg" class="error hidden topgap"></div>
-  <div class="row space topgap"><a href="index.html">← กลับหน้าผู้เข้าสอบ</a><button id="loginBtn" class="btn">เข้าสู่ระบบ</button></div>
+  <div class="row space topgap">
+    <a href="index.html">← กลับหน้าผู้เข้าสอบ</a>
+    <button id="loginBtn" class="btn">เข้าสู่ระบบ</button>
+  </div>
 </section>
 
 <section id="adminApp" class="hidden">
-  <div class="card header"><div class="brand"><div class="kicker">NANGRONG TECHNICAL COLLEGE</div><h1>แผงควบคุมข้อสอบรวมทุกวิชา</h1><p>ผู้จัดทำ: นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</p></div><div class="row"><a class="btn secondary small" href="index.html">หน้าผู้เข้าสอบ</a><button id="logoutBtn" class="btn danger small">ออกจากระบบ</button></div></div>
-  <div class="grid four">
-    <div class="metric"><div class="muted">ข้อสอบในคลัง</div><b id="mQuestions">0</b></div>
-    <div class="metric"><div class="muted">รายวิชาพร้อมสอบ</div><b id="mSubjects">0</b></div>
-    <div class="metric"><div class="muted">ลงทะเบียนแล้ว</div><b id="mRegs">0</b></div>
-    <div class="metric"><div class="muted">ส่งข้อสอบ</div><b id="mSubs">0</b></div>
-    <div class="metric"><div class="muted">คะแนนเฉลี่ย /20</div><b id="mAvg">0.00</b></div>
+  <div class="card admin-hero">
+    <div class="brand">
+      <div class="kicker">NANGRONG TECHNICAL COLLEGE</div>
+      <h1>Exam Control Dashboard</h1>
+      <p>ระบบบริหารข้อสอบ ผู้เข้าสอบ และผลคะแนน</p>
+    </div>
+    <div class="row">
+      <a class="btn secondary small" href="index.html">หน้าผู้เข้าสอบ</a>
+      <button id="logoutBtn" class="btn danger small">ออกจากระบบ</button>
+    </div>
   </div>
 
-  <div class="tabs"><button class="tab active" data-tab="results">ผลสอบ</button><button class="tab" data-tab="registrations">ผู้ลงทะเบียน</button><button class="tab" data-tab="questions">จัดการข้อสอบ</button><button class="tab" data-tab="backup">สำรองข้อมูล</button></div>
+  <div class="dashboard-metrics">
+    <div class="metric metric-accent"><span>ข้อสอบในคลัง</span><b id="mQuestions">0</b><small>ข้อ</small></div>
+    <div class="metric"><span>รายวิชาพร้อมสอบ</span><b id="mSubjects">0</b><small>วิชา</small></div>
+    <div class="metric"><span>ผู้ลงทะเบียน</span><b id="mRegs">0</b><small>คน/รายการ</small></div>
+    <div class="metric"><span>กำลังสอบ</span><b id="mActive">0</b><small>คน</small></div>
+    <div class="metric"><span>ส่งข้อสอบแล้ว</span><b id="mSubs">0</b><small>รายการ</small></div>
+    <div class="metric"><span>คะแนนเฉลี่ย</span><b id="mAvg">0.00</b><small>/20</small></div>
+  </div>
 
-  <section id="tab-results" class="card">
-    <div class="row space"><div><h2>ผลการสอบ</h2><div class="muted">คะแนนคำนวณเฉพาะหน้า Admin: จำนวนข้อถูก × 20 ÷ 50</div></div><div class="row"><select id="resultSubjectFilter" class="filter-select"></select><button id="clearResults" class="btn danger small">ลบผลสอบทั้งหมด</button></div></div>
-    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead><tbody id="resultRows"></tbody></table></div>
+  <nav class="tabs admin-tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="results">ผลสอบ</button>
+    <button class="tab" data-tab="users">ผู้เข้าสอบ</button>
+    <button class="tab" data-tab="questions">จัดการข้อสอบ</button>
+    <button class="tab" data-tab="backup">สำรอง / ตั้งค่า</button>
+  </nav>
+
+  <section id="tab-dashboard" class="card">
+    <div class="row space">
+      <div>
+        <div class="kicker">OVERVIEW</div>
+        <h2>ภาพรวมการสอบ</h2>
+        <div class="muted">อัปเดตรายชื่อและผลสอบจาก Firebase แบบเรียลไทม์</div>
+      </div>
+      <button id="refreshDashboard" class="btn secondary small">รีเฟรช</button>
+    </div>
+
+    <div class="dashboard-two">
+      <div class="dash-panel">
+        <h3>สถานะผู้เข้าสอบ</h3>
+        <div class="status-grid">
+          <div><span>ลงทะเบียนแล้ว</span><b id="dRegistered">0</b></div>
+          <div><span>กำลังสอบ</span><b id="dStarted">0</b></div>
+          <div><span>ส่งข้อสอบแล้ว</span><b id="dCompleted">0</b></div>
+          <div><span>ยุติการสอบ</span><b id="dTerminated">0</b></div>
+        </div>
+      </div>
+      <div class="dash-panel future-panel">
+        <h3>พื้นที่พัฒนาระบบต่อ</h3>
+        <p>โครงระบบถูกแยกเป็นส่วนข้อสอบ ผู้ใช้ ผลคะแนน และฐานข้อมูล เพื่อรองรับการเพิ่ม <b>เกมการศึกษา</b> ในระยะถัดไป</p>
+        <span class="future-badge">Educational Games · Planned</span>
+      </div>
+    </div>
+
+    <div class="dash-panel topgap">
+      <div class="row space">
+        <h3>สรุปแยกตามรายวิชา</h3>
+        <span class="muted">จำนวนลงทะเบียน / ส่งข้อสอบ / คะแนนเฉลี่ย</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>รหัสวิชา</th><th>รายวิชา</th><th>ข้อสอบ</th><th>ลงทะเบียน</th><th>ส่งข้อสอบ</th><th>คะแนนเฉลี่ย /20</th></tr></thead>
+          <tbody id="subjectSummaryRows"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
-  <section id="tab-registrations" class="card hidden">
-    <div class="row space"><h2>ข้อมูลผู้ลงทะเบียน</h2><div class="row"><select id="regSubjectFilter" class="filter-select"></select><button id="clearRegs" class="btn danger small">ลบข้อมูลทั้งหมด</button></div></div>
-    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="regRows"></tbody></table></div>
+  <section id="tab-results" class="card hidden">
+    <div class="row space">
+      <div><h2>ผลการสอบ</h2><div class="muted">คะแนนจะแสดงเมื่อผู้เข้าสอบส่งข้อสอบสำเร็จแล้วเท่านั้น</div></div>
+      <button id="exportResultsExcel" class="btn small">ส่งออก Excel</button>
+    </div>
+
+    <div class="admin-filter-grid">
+      <div class="field"><label>ค้นหา</label><input id="resultSearch" placeholder="ชื่อ / เลขนักศึกษา / แผนก"></div>
+      <div class="field"><label>รายวิชา</label><select id="resultSubjectFilter"></select></div>
+      <div class="field"><label>ชั้น / ห้อง</label><select id="resultClassFilter"></select></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead>
+        <tbody id="resultRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-users" class="card hidden">
+    <div class="row space">
+      <div><h2>ผู้เข้าสอบ / User</h2><div class="muted">รายชื่อขึ้นทันทีหลังลงทะเบียน และ Admin สามารถเพิ่ม User โดยตรงได้</div></div>
+      <div class="row">
+        <button id="toggleAddUser" class="btn small">+ เพิ่ม User</button>
+        <button id="exportUsersExcel" class="btn secondary small">ส่งออก Excel</button>
+      </div>
+    </div>
+
+    <div id="addUserPanel" class="admin-add-user hidden">
+      <h3>เพิ่มผู้เข้าสอบโดย Admin</h3>
+      <div class="grid two">
+        <div class="field"><label>เลขนักศึกษา</label><input id="newStudentId"></div>
+        <div class="field"><label>ชื่อ-นามสกุล</label><input id="newStudentName"></div>
+        <div class="field"><label>ชั้น / ห้อง</label><input id="newStudentClass" placeholder="เช่น ปวช.2/1"></div>
+        <div class="field"><label>แผนกวิชา</label><input id="newStudentDept"></div>
+        <div class="field"><label>กำหนดรายวิชา (ไม่บังคับ)</label><select id="newStudentSubject"></select></div>
+        <div class="field"><label>สถานะ</label>
+          <select id="newStudentStatus">
+            <option value="registered">ลงทะเบียนแล้ว</option>
+            <option value="exam_started">กำลังสอบ</option>
+            <option value="completed">ส่งข้อสอบแล้ว</option>
+          </select>
+        </div>
+      </div>
+      <div id="addUserMsg" class="error hidden topgap"></div>
+      <div class="row topgap">
+        <button id="saveNewUser" class="btn">บันทึก User</button>
+        <button id="cancelAddUser" class="btn secondary">ยกเลิก</button>
+      </div>
+    </div>
+
+    <div class="admin-filter-grid">
+      <div class="field"><label>ค้นหาเร็ว</label><input id="regSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้น / แผนก"></div>
+      <div class="field"><label>รายวิชา</label><select id="regSubjectFilter"></select></div>
+      <div class="field"><label>ชั้น / ห้อง</label><select id="regClassFilter"></select></div>
+      <div class="field"><label>สถานะ</label>
+        <select id="regStatusFilter">
+          <option value="">ทุกสถานะ</option>
+          <option value="registered">ลงทะเบียนแล้ว</option>
+          <option value="exam_started">กำลังสอบ</option>
+          <option value="completed">ส่งข้อสอบแล้ว</option>
+          <option value="terminated">ยุติการสอบ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row space list-counter">
+      <span class="muted">รายการที่แสดง</span><b id="visibleUserCount">0</b>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody id="regRows"></tbody>
+      </table>
+    </div>
   </section>
 
   <section id="tab-questions" class="card hidden">
-    <div class="row space"><div><h2>จัดการคลังข้อสอบ</h2><div class="muted">ข้อสอบสำเร็จรูป 550 ข้อถูกฝังมากับเว็บแล้ว และ Admin ยังเพิ่ม แก้ไข หรือลบได้</div></div><button id="resetQuestions" class="btn secondary small">คืนค่าข้อสอบสำเร็จรูป 550 ข้อ</button></div>
-    <div class="row filter-row"><label class="muted">กรองรายการ:</label><select id="questionSubjectFilter" class="filter-select"></select></div>
+    <div class="row space">
+      <div>
+        <h2>จัดการคลังข้อสอบ</h2>
+        <div class="muted">ข้อสอบสำเร็จรูป 550 ข้อ พร้อมเฉลย และยังเพิ่ม / แก้ไข / ลบรายข้อได้</div>
+      </div>
+      <button id="resetQuestions" class="btn secondary small">คืนค่าข้อสอบมาตรฐาน</button>
+    </div>
+    <div class="row filter-row"><label class="muted">กรองรายการ:</label><select id="questionSubjectFilter"></select></div>
     <div class="grid two">
       <div class="field"><label>รายวิชา</label><select id="qSubject"></select></div>
       <div class="field"><label>คำตอบที่ถูก</label><select id="qCorrect"><option value="0">ก</option><option value="1">ข</option><option value="2">ค</option><option value="3">ง</option></select></div>
     </div>
     <div class="field topgap"><label>คำถาม</label><textarea id="qText"></textarea></div>
-    <div class="grid two topgap"><div class="field"><label>ก.</label><textarea id="o0"></textarea></div><div class="field"><label>ข.</label><textarea id="o1"></textarea></div><div class="field"><label>ค.</label><textarea id="o2"></textarea></div><div class="field"><label>ง.</label><textarea id="o3"></textarea></div></div>
+    <div class="grid two topgap">
+      <div class="field"><label>ก.</label><textarea id="o0"></textarea></div>
+      <div class="field"><label>ข.</label><textarea id="o1"></textarea></div>
+      <div class="field"><label>ค.</label><textarea id="o2"></textarea></div>
+      <div class="field"><label>ง.</label><textarea id="o3"></textarea></div>
+    </div>
     <div class="field topgap"><label>คำอธิบาย / เหตุผล</label><textarea id="qExplain"></textarea></div>
     <div id="qMsg" class="error hidden topgap"></div>
     <div class="row topgap"><button id="saveQuestion" class="btn">เพิ่มข้อสอบ</button><button id="cancelEdit" class="btn secondary hidden">ยกเลิกแก้ไข</button></div>
-    <hr><div id="questionList"></div>
+    <hr>
+    <div id="questionList"></div>
   </section>
 
   <section id="tab-backup" class="card hidden">
-    <h2>สำรอง / ย้ายข้อมูล</h2><p class="muted">ข้อมูลทั้งหมดอ่านจาก Firebase Firestore กลาง</p>
-    <div class="row"><button id="exportBtn" class="btn">ดาวน์โหลดข้อมูล JSON</button><label class="btn secondary file-label">นำเข้า JSON<input id="importFile" type="file" accept="application/json" hidden></label></div>
-    <div class="notice topgap">รหัสเข้าห้องสอบของทุกวิชาเป็น <b>A2000</b></div>
+    <h2>สำรองข้อมูล / ตั้งค่า</h2>
+    <p class="muted">ส่วนนี้ใช้สำหรับงานดูแลระบบ ไม่จำเป็นต้องเปิดใช้งานระหว่างการสอบปกติ</p>
+    <div class="row">
+      <button id="exportBtn" class="btn">ดาวน์โหลด Backup JSON</button>
+      <button id="exportAllExcel" class="btn secondary">ส่งออก Excel ทั้งระบบ</button>
+    </div>
+
+    <div class="notice topgap">
+      รหัสล็อกอินเข้าวิชาของทุกวิชาปัจจุบันคือ <b>A2000</b>
+    </div>
+
+    <details class="danger-zone topgap">
+      <summary>⚠️ Danger Zone — คำสั่งลบข้อมูลจำนวนมาก</summary>
+      <div class="danger-zone-inner">
+        <p>ซ่อนคำสั่งเหล่านี้ไว้เพื่อลดโอกาสกดโดยไม่ตั้งใจ ทุกคำสั่งจะถามยืนยันอีกครั้ง</p>
+        <div class="row">
+          <button id="clearResults" class="btn danger small">ลบผลสอบทั้งหมด</button>
+          <button id="clearRegs" class="btn danger small">ลบผู้ลงทะเบียนทั้งหมด</button>
+          <button id="deleteAllQuestions" class="btn danger small">ลบข้อสอบทั้งหมด</button>
+        </div>
+        <div class="muted topgap">การลบข้อสอบทั้งหมดต้องพิมพ์คำยืนยันเพิ่มเติม และยังสามารถใช้ “คืนค่าข้อสอบมาตรฐาน” เพื่อสร้างชุด 550 ข้อกลับมาได้</div>
+      </div>
+    </details>
   </section>
 </section>
-</main><script type="module" src="admin.js"></script></body></html>
+
+</main>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
