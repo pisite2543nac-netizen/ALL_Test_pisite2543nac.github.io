@@ -7,7 +7,6 @@
     "basic": 10,
     "hard": 25
   },
-  "roomCode": "A2000",
   "subjects": [
     {
       "id": "safety",
@@ -137,5 +136,18 @@
     "showsScoreToStudent": false,
     "showsCorrectAnswer": true,
     "showsExplanation": true
+  },
+  "subjectAccessCodes": {
+    "safety": "S8F2K1",
+    "labor-law": "L7W4P9",
+    "network": "N5T8R2",
+    "ui": "U3I7X5",
+    "data-input": "D9I4M6",
+    "it-service": "T6S2V8",
+    "programming-language": "C4D9K3",
+    "advanced-ui": "A7U5Q2",
+    "frontend": "F8E3R7",
+    "mobile": "M2B6X9",
+    "computer-programming": "P5G8N4"
   }
 }

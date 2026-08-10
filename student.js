@@ -1,6 +1,6 @@
 import { studentAuth, studentDb, isFirebaseConfigured } from './firebase-service.js';
 import { ADMIN_UID } from './firebase-config.js';
-import { SUBJECTS, EXAM_ROOM_CODE } from './subjects.js';
+import { SUBJECTS } from './subjects.js';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -334,7 +334,7 @@ async function unlockAndStart(s){
   const input=$(`subject-code-${s.id}`);
   const value=normalize(input.value).toUpperCase();
 
-  if(value!==EXAM_ROOM_CODE.toUpperCase()){
+  if(value!==String(s.accessCode||'').toUpperCase()){
     subjectMessage(s,'รหัสล็อกอินไม่ถูกต้อง กรุณาตรวจสอบรหัสกับครูผู้สอน');
     input.focus();
     input.select();
