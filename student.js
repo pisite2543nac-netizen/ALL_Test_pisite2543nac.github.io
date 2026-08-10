@@ -465,6 +465,7 @@ function startRevealCountdown(state){
     if(remain<=0){
       $('revealCountdown').textContent='00:00';
       revealAnswers(state);
+      updatePendingRevealShortcut();
       return;
     }
     $('revealCountdown').textContent=formatReveal(remain);
@@ -485,6 +486,100 @@ function resumePendingReveal(){
   }catch{
     return false;
   }
+}
+
+function getPendingRevealState(){
+  const key=localStorage.getItem('nangrongLatestRevealKey');
+  if(!key)return null;
+  try{
+    const state=JSON.parse(localStorage.getItem(key)||'null');
+    if(!state||!state.wantsKey||!state.submissionId)return null;
+    return state;
+  }catch{
+    return null;
+  }
+}
+
+function updatePendingRevealShortcut(){
+  const box=$('pendingRevealShortcut');
+  if(!box)return;
+  const state=getPendingRevealState();
+  if(!state){
+    box.classList.add('hidden');
+    return;
+  }
+  const remain=Math.max(0,Math.ceil((Number(state.revealAt)-Date.now())/1000));
+  $('pendingRevealShortcutText').textContent = remain>0
+    ? `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เหลือประมาณ ${formatReveal(remain)}`
+    : `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เฉลยพร้อมเปิดแล้ว`;
+  box.classList.remove('hidden');
+}
+
+function hideAllStudentScreens(){
+  ['screen-register','screen-subject','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
+}
+
+function goStudentHome(){
+  clearInterval(revealTimer);
+  active=false;
+  hideAllStudentScreens();
+  $('screen-register').classList.remove('hidden');
+  $('watermark')?.classList.add('hidden');
+  $('reviewSection')?.classList.add('hidden');
+  $('revealWaiting')?.classList.add('hidden');
+  updatePendingRevealShortcut();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function chooseAnotherSubject(){
+  clearInterval(revealTimer);
+  active=false;
+  if(!student){
+    goStudentHome();
+    return;
+  }
+  hideAllStudentScreens();
+  $('screen-subject').classList.remove('hidden');
+  $('watermark')?.classList.add('hidden');
+  renderSubjects();
+  updatePendingRevealShortcut();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function logoutStudent(){
+  clearInterval(revealTimer);
+  active=false;
+  student=null;
+  selectedSubject=null;
+  registrationId='';
+  checkinId='';
+  attemptToken='';
+  questions=[];
+  answers=[];
+  current=0;
+
+  ['studentId','name','className','department'].forEach(id=>{
+    if($(id))$(id).value='';
+  });
+  if($('accept'))$('accept').checked=false;
+
+  hideAllStudentScreens();
+  $('screen-register').classList.remove('hidden');
+  $('watermark')?.classList.add('hidden');
+  updatePendingRevealShortcut();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function openPendingReveal(){
+  const state=getPendingRevealState();
+  if(!state){
+    updatePendingRevealShortcut();
+    alert('ไม่พบเฉลยที่กำลังรออยู่');
+    return;
+  }
+  hideAllStudentScreens();
+  startRevealCountdown(state);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 async function finish(status='submitted'){
@@ -557,10 +652,15 @@ function violation(){
   }
 }
 
-const resumedReveal=resumePendingReveal();
-if(resumedReveal){$('screen-register')?.classList.add('hidden');}
+// ไม่บังคับพาผู้ใช้กลับไปหน้าเฉลยอัตโนมัติ เพื่อไม่ให้ติดอยู่หน้าเดิม
+// หากมีเฉลยที่กำลังรอ จะมีปุ่ม "ดูสถานะเฉลย" ที่หน้าหลักแทน
+updatePendingRevealShortcut();
 
 $('registerContinueBtn').onclick=collectRegistration;
+$('backHomeBtn').onclick=goStudentHome;
+$('anotherSubjectBtn').onclick=chooseAnotherSubject;
+$('logoutStudentBtn').onclick=logoutStudent;
+$('openPendingRevealBtn').onclick=openPendingReveal;
 $('editStudentBtn').onclick=editStudent;
 $('prevBtn').onclick=()=>{current=Math.max(0,current-1);render()};
 $('nextBtn').onclick=()=>{current=Math.min(EXAM_COUNT-1,current+1);render()};

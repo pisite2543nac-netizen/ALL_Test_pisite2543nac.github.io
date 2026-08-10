@@ -449,3 +449,43 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   .status-grid{grid-template-columns:1fr 1fr}
   .admin-hero{align-items:flex-start;flex-direction:column}
 }
+
+
+/* =========================================================
+   POST-EXAM NAVIGATION FIX
+   ========================================================= */
+.done-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:24px;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+}
+.done-actions .btn{
+  min-width:160px;
+}
+.done-help{
+  margin-top:10px;
+  font-size:.82rem;
+}
+.pending-reveal-shortcut{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin:16px 0;
+  padding:14px 16px;
+  border:1px solid #6e5721;
+  border-radius:14px;
+  background:rgba(83,61,15,.32);
+}
+.pending-reveal-shortcut b{
+  color:#ffe8a7;
+}
+@media(max-width:650px){
+  .done-actions{flex-direction:column}
+  .done-actions .btn{width:100%}
+  .pending-reveal-shortcut{align-items:stretch;flex-direction:column}
+  .pending-reveal-shortcut .btn{width:100%}
+}

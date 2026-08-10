@@ -82,6 +82,14 @@
 
   <div id="registerMsg" class="error hidden"></div>
 
+  <div id="pendingRevealShortcut" class="pending-reveal-shortcut hidden">
+    <div>
+      <b>มีเฉลยจากการสอบก่อนหน้าที่กำลังรอเปิด</b>
+      <div id="pendingRevealShortcutText" class="muted">สามารถกลับมาตรวจสอบได้โดยไม่ต้องค้างอยู่หน้าเดิม</div>
+    </div>
+    <button id="openPendingRevealBtn" class="btn secondary small" type="button">ดูสถานะเฉลย</button>
+  </div>
+
   <div class="row space">
     <span class="muted">เมื่อกดลงทะเบียน ชื่อจะถูกบันทึกและแสดงในหน้า Admin ทันที</span>
     <button class="btn" id="registerContinueBtn">ลงทะเบียนและเลือกวิชา</button>
@@ -151,8 +159,13 @@
     <div id="reviewList"></div>
   </div>
 
-  <div class="row" style="margin-top:20px">
-    <button class="btn" onclick="location.reload()">กลับหน้าลงทะเบียน</button>
+  <div class="done-actions">
+    <button id="backHomeBtn" class="btn" type="button">← กลับหน้าหลัก</button>
+    <button id="anotherSubjectBtn" class="btn secondary" type="button">เลือกวิชาอื่น</button>
+    <button id="logoutStudentBtn" class="btn secondary" type="button">ออกจากผู้เข้าสอบ</button>
+  </div>
+  <div class="muted done-help">
+    การออกจากหน้านี้ไม่ยกเลิกผลสอบ และเวลารอเฉลยยังเดินต่อ ระบบจะเก็บสถานะไว้ในเบราว์เซอร์นี้
   </div>
 </section>
 
