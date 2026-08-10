@@ -13,7 +13,7 @@ import {
   collection, getDocs, getDoc, query, where, doc, setDoc, addDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3, REVEAL_DELAY_MS=30*60*1000;
+const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3, REVEAL_DELAY_MS=30*60*1000, REVEAL_KEEP_MS=24*60*60*1000;
 let selectedSubject=null, questions=[], answers=[], current=0, timeLeft=EXAM_SECONDS, timer=null;
 let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', checkinId='', startingExam=false, wantsKey=true, revealTimer=null;
 let authReady=false;
@@ -45,7 +45,7 @@ function showRegister(){
 function showAuthHome(){
   ['screen-subject','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
   $('screen-auth').classList.remove('hidden');
-  updatePendingRevealShortcut();
+  $('pendingRevealShortcut')?.classList.add('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function showSubjectHome(){
@@ -62,6 +62,7 @@ function showSubjectHome(){
     <span>${wantsKey?'รับเฉลยหลัง 30 นาที':'ไม่รับเฉลย'}</span>
   `;
   renderSubjects();
+  updatePendingRevealShortcut();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -208,6 +209,7 @@ async function logoutUser(){
   clearInterval(timer);clearInterval(revealTimer);
   active=false;student=null;selectedSubject=null;checkinId='';registrationId='';attemptToken='';
   try{await signOut(studentAuth)}catch{}
+  $('pendingRevealShortcut')?.classList.add('hidden');
   showLogin();
   showAuthHome();
 }
@@ -483,19 +485,29 @@ function payload(status){
 function revealStorageKey(submissionId){
   return `nangrongReveal30::${submissionId}`;
 }
+function latestRevealPointerKey(){
+  const uid=studentAuth.currentUser?.uid || student?.uid || '';
+  return uid ? `nangrongLatestRevealKey::${uid}` : '';
+}
 function saveRevealState(submissionId,revealAt){
+  const ownerUid=studentAuth.currentUser?.uid || student?.uid || '';
   const state={
     submissionId,
     revealAt,
+    expiresAt: revealAt + REVEAL_KEEP_MS,
     wantsKey:true,
+    ownerUid,
+    studentId:student?.studentId||'',
     subjectId:selectedSubject.id,
     subjectCode:selectedSubject.code,
     subjectName:selectedSubject.name,
     questionIds:questions.map(q=>q.id),
     selectedOriginal:answers.map((a,i)=>a<0?-1:questions[i].originalIndices[a])
   };
-  localStorage.setItem(revealStorageKey(submissionId),JSON.stringify(state));
-  localStorage.setItem('nangrongLatestRevealKey',revealStorageKey(submissionId));
+  const storageKey=revealStorageKey(submissionId);
+  localStorage.setItem(storageKey,JSON.stringify(state));
+  const pointer=latestRevealPointerKey();
+  if(pointer)localStorage.setItem(pointer,storageKey);
 }
 function formatReveal(sec){
   sec=Math.max(0,Math.ceil(sec));
@@ -558,6 +570,17 @@ async function revealAnswers(state){
   }
 }
 function startRevealCountdown(state){
+  const expiresAt=Number(state.expiresAt || (Number(state.revealAt)+REVEAL_KEEP_MS));
+  if(Date.now()>expiresAt){
+    const pointer=latestRevealPointerKey();
+    const key=pointer?localStorage.getItem(pointer):null;
+    if(key)localStorage.removeItem(key);
+    if(pointer)localStorage.removeItem(pointer);
+    updatePendingRevealShortcut();
+    showSubjectHome();
+    return;
+  }
+
   showDoneForReveal(state);
   const wait=$('revealWaiting');
   wait.classList.remove('hidden');
@@ -577,25 +600,41 @@ function startRevealCountdown(state){
   revealTimer=setInterval(tick,1000);
 }
 function resumePendingReveal(){
-  const key=localStorage.getItem('nangrongLatestRevealKey');
-  if(!key)return false;
-  try{
-    const state=JSON.parse(localStorage.getItem(key)||'null');
-    if(!state||!state.wantsKey||!state.submissionId)return false;
-    showDoneForReveal(state);
-    startRevealCountdown(state);
-    return true;
-  }catch{
-    return false;
-  }
+  const state=getPendingRevealState();
+  if(!state)return false;
+  showDoneForReveal(state);
+  startRevealCountdown(state);
+  return true;
 }
 
 function getPendingRevealState(){
-  const key=localStorage.getItem('nangrongLatestRevealKey');
+  const user=studentAuth.currentUser;
+  if(!user || !student)return null;
+
+  const pointer=latestRevealPointerKey();
+  if(!pointer)return null;
+
+  const key=localStorage.getItem(pointer);
   if(!key)return null;
+
   try{
     const state=JSON.parse(localStorage.getItem(key)||'null');
     if(!state||!state.wantsKey||!state.submissionId)return null;
+
+    // ป้องกัน User คนอื่นเห็นเฉลยของบัญชีเดิมบนเครื่องเดียวกัน
+    if(state.ownerUid && state.ownerUid!==user.uid)return null;
+    if(state.studentId && state.studentId!==student.studentId)return null;
+
+    const expiresAt=Number(state.expiresAt || (Number(state.revealAt)+REVEAL_KEEP_MS));
+
+    // เก็บเฉลยไว้ 1 วันหลังจากเวลาเปิดเฉลย
+    if(Date.now()>expiresAt){
+      localStorage.removeItem(key);
+      localStorage.removeItem(pointer);
+      return null;
+    }
+
+    state.expiresAt=expiresAt;
     return state;
   }catch{
     return null;
@@ -605,15 +644,35 @@ function getPendingRevealState(){
 function updatePendingRevealShortcut(){
   const box=$('pendingRevealShortcut');
   if(!box)return;
+
+  // แสดงแท็กเฉลยเฉพาะเมื่อ User Login แล้วเท่านั้น
+  if(!studentAuth.currentUser || !student){
+    box.classList.add('hidden');
+    return;
+  }
+
   const state=getPendingRevealState();
   if(!state){
     box.classList.add('hidden');
     return;
   }
-  const remain=Math.max(0,Math.ceil((Number(state.revealAt)-Date.now())/1000));
-  $('pendingRevealShortcutText').textContent = remain>0
-    ? `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เหลือประมาณ ${formatReveal(remain)}`
-    : `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เฉลยพร้อมเปิดแล้ว`;
+
+  const now=Date.now();
+  const revealAt=Number(state.revealAt);
+  const expiresAt=Number(state.expiresAt || (revealAt+REVEAL_KEEP_MS));
+  const remain=Math.max(0,Math.ceil((revealAt-now)/1000));
+
+  if(now<revealAt){
+    $('pendingRevealShortcutText').textContent =
+      `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เฉลยจะเปิดในอีกประมาณ ${formatReveal(remain)}`;
+  }else{
+    const keepRemain=Math.max(0,Math.ceil((expiresAt-now)/1000));
+    const h=Math.floor(keepRemain/3600);
+    const m=Math.floor((keepRemain%3600)/60);
+    $('pendingRevealShortcutText').textContent =
+      `วิชา ${state.subjectCode||''} ${state.subjectName||''} · เฉลยพร้อมเปิดแล้ว และจะหายไปในประมาณ ${h} ชม. ${m} นาที`;
+  }
+
   box.classList.remove('hidden');
 }
 
@@ -654,7 +713,7 @@ function openPendingReveal(){
   const state=getPendingRevealState();
   if(!state){
     updatePendingRevealShortcut();
-    alert('ไม่พบเฉลยที่กำลังรออยู่');
+    alert('ไม่พบเฉลยที่กำลังรออยู่ หรือเฉลยหมดอายุแล้ว');
     return;
   }
   hideAllStudentScreens();
@@ -781,8 +840,7 @@ window.addEventListener('beforeunload',e=>{
   if(active){e.preventDefault();e.returnValue=''}
 });
 
-// ไม่บังคับ Auto Resume หน้าเฉลย
-updatePendingRevealShortcut();
+// ไม่บังคับ Auto Resume หน้าเฉลย และไม่แสดงแท็กจนกว่า User จะ Login
 
 // Auto-login Student จาก session ที่จำไว้
 setPersistence(studentAuth,browserLocalPersistence).catch(()=>{});

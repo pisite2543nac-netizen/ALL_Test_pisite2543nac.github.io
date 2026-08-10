@@ -541,3 +541,18 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   .password-wrap{gap:5px}
   .password-toggle{padding:0 9px}
 }
+
+
+/* =========================================================
+   USER-ONLY ANSWER NOTICE
+   ========================================================= */
+#screen-subject .pending-reveal-shortcut{
+  margin:14px 0 20px;
+  border-color:#79601d;
+  background:
+    linear-gradient(135deg,rgba(104,77,13,.28),rgba(28,42,43,.58));
+  box-shadow:inset 4px 0 0 #f0bf36;
+}
+#screen-subject .pending-reveal-shortcut b{
+  color:#ffe69a;
+}
