@@ -285,3 +285,110 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   .subject-code-row{flex-direction:column}
   .subject-code-row .btn{width:100%}
 }
+
+
+/* =========================================================
+   Answer preference + delayed answer reveal (30 minutes)
+   ========================================================= */
+.answer-choice{
+  margin:18px 0;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(5,24,39,.62);
+}
+.answer-choice-title{
+  color:#fff;
+  font-weight:900;
+  margin-bottom:10px;
+}
+.answer-choice-options{
+  display:flex;
+  gap:12px 22px;
+  flex-wrap:wrap;
+}
+.answer-choice-options label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#d8e7f2;
+  cursor:pointer;
+}
+.answer-choice-options input{width:auto}
+.small-text{font-size:.82rem;margin-top:9px}
+
+.reveal-wait{
+  margin:22px 0;
+  padding:22px;
+  border:1px solid #8a6a20;
+  border-radius:16px;
+  background:rgba(73,52,11,.42);
+  text-align:center;
+}
+.reveal-label{color:#f6e5b6;font-weight:800}
+.reveal-countdown{
+  font-size:2.7rem;
+  line-height:1.15;
+  font-weight:950;
+  color:var(--warning);
+  letter-spacing:2px;
+  margin:8px 0;
+}
+.review-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin:28px 0 14px;
+}
+.review-note{
+  border:1px solid var(--line);
+  background:#08233a;
+  color:var(--muted);
+  padding:7px 10px;
+  border-radius:999px;
+  font-size:.78rem;
+  white-space:nowrap;
+}
+.review-card{
+  border:1px solid var(--line);
+  border-left:5px solid #60778b;
+  border-radius:14px;
+  background:#0a2237;
+  padding:17px;
+  margin-bottom:13px;
+}
+.review-card.review-correct{border-left-color:var(--ok)}
+.review-card.review-wrong{border-left-color:var(--danger)}
+.review-qno{
+  color:var(--accent2);
+  font-size:.78rem;
+  font-weight:900;
+  margin-bottom:5px;
+}
+.review-question{
+  color:#fff;
+  font-weight:800;
+  margin-bottom:11px;
+}
+.review-answer{
+  padding:8px 10px;
+  border-radius:9px;
+  margin-top:7px;
+  background:#071b2c;
+  color:#d5e5f1;
+}
+.review-answer.ok{border:1px solid rgba(57,211,126,.5)}
+.review-answer.bad{border:1px solid rgba(255,88,112,.5)}
+.review-answer.correct{
+  border:1px solid rgba(57,211,126,.5);
+  color:#d8ffe6;
+}
+.review-explain{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:9px;
+  background:#112c42;
+  color:#bcd0df;
+  line-height:1.65;
+}

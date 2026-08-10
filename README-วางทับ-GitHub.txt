@@ -1,30 +1,39 @@
-NANGRONG EXAM — REGISTER -> SUBJECT CODE -> EXAM
+NANGRONG EXAM — FULL 550 QUESTIONS + 30 MINUTE ANSWER REVIEW
 
-ลำดับการใช้งาน
-1) นักศึกษาลงทะเบียนก่อน: เลขนักศึกษา / ชื่อ-นามสกุล / ชั้น-กลุ่ม / แผนก
-2) ระบบแสดง 11 รายวิชา
-3) แต่ละรายวิชามีช่องกรอก Code ของตัวเอง
-4) Code ปัจจุบันของทุกวิชา = A2000
-5) Code ถูกต้อง -> ระบบบันทึก registration ของวิชานั้นใน Firestore -> โหลดข้อสอบ -> เริ่มสอบ
-6) ส่งข้อสอบ -> บันทึก submissions -> หน้า User ไม่แสดงคะแนน
-7) Admin เป็นผู้ดูคะแนนและข้อมูลทั้งหมด
+ระบบ:
+1) นักศึกษาลงทะเบียนก่อน
+2) เลือกรายวิชา
+3) กรอก Code แยกรายวิชา (ปัจจุบันทุกวิชาใช้ A2000)
+4) เข้าสอบ 50 ข้อ / 75 นาที / คะแนนเต็ม 20
+5) นักศึกษาเลือกได้ว่าจะรับเฉลยหรือไม่
+6) ถ้าเลือกรับเฉลย: หลังส่งข้อสอบครบ 30 นาที ระบบเปิดเฉลยพร้อมเหตุผลรายข้อ
+7) หน้า Student ไม่แสดงคะแนน
+8) Admin ดูคะแนนและจัดการข้อสอบได้เหมือนเดิม
 
-ไฟล์ข้อสอบพร้อมนำเข้า:
-initial-question-bank-all-subjects.json
+คลังข้อสอบ:
+- 11 วิชา
+- วิชาละ 50 ข้อ
+- รวม 550 ข้อ
+- ต่อวิชา: ง่าย 15 + พื้นฐาน 10 + ยาก 25
+- ทุกข้อมี correct + explain
+- ระดับความยากไม่แสดงในหน้าผู้เข้าสอบ
 
-จำนวนข้อสอบ:
-11 วิชา x 50 ข้อ = 550 ข้อ
-ต่อวิชา: ง่าย 15 + พื้นฐาน 10 + ยาก 25
-ระดับความยากไม่แสดงในหน้าผู้เข้าสอบ
+ไฟล์สำคัญ:
+- initial-question-bank-all-subjects.json = คลังข้อสอบ 550 ข้อพร้อมเฉลยสำหรับนำเข้า Firestore
+- answer-bank-30min.json = ชุดเฉลยที่หน้า Student โหลดเมื่อครบเวลารอ 30 นาที
+- QUESTION_BANK_MANIFEST.json = สรุปจำนวนข้อสอบ
+- firestore.rules = Rules ล่าสุด
+- firebase-config.js = Firebase config ล่าสุด
 
-การติดตั้ง:
-- แตก ZIP แล้วอัปโหลดไฟล์ทั้งหมดวางทับ root ของ GitHub Repository
-- รอ GitHub Pages deploy สำเร็จ
-- นำ firestore.rules ไปวางใน Firebase > Firestore Database > Rules > Publish
-- Login Admin
-- แท็บจัดการข้อสอบ > นำเข้าคลังข้อสอบ JSON
-- เลือก initial-question-bank-all-subjects.json
-- หลังนำเข้าสำเร็จหน้า Admin ควรแสดง 550 ข้อ และ 11 วิชาพร้อมสอบ
+วิธีติดตั้ง:
+1) แตก ZIP และวางทับไฟล์ทั้งหมดใน root ของ GitHub Repository
+2) รอ GitHub Pages Deploy สำเร็จ
+3) นำ firestore.rules ไป Firebase > Firestore Database > Rules > Publish
+4) Login Admin > จัดการข้อสอบ > นำเข้าคลังข้อสอบ JSON
+5) เลือก initial-question-bank-all-subjects.json
+6) เมื่อสำเร็จ Admin ควรแสดง 550 ข้อ / 11 วิชา
 
-Firebase config ในชุดนี้ใช้ API key ตัวล่าสุดที่คัดลอกจาก Firebase Console:
-AIzaSyDS6O53SYD8nAqYN3lu9YVT1UbKobIRx00
+หมายเหตุ:
+- ระบบนับ 30 นาทีจากเวลาที่ส่งข้อสอบสำเร็จ
+- ถ้าปิดหน้าเว็บ สามารถกลับมาเปิดบนเบราว์เซอร์เดิมได้ ระบบเก็บเวลาปลดล็อกเฉลยไว้ใน localStorage
+- รอบสอบที่ถูกยุติจากพฤติกรรมต้องสงสัยจะไม่เปิดเฉลย

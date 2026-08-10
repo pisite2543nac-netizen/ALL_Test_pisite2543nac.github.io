@@ -2,9 +2,9 @@ import { db, isFirebaseConfigured } from './firebase-service.js';
 import { SUBJECTS, EXAM_ROOM_CODE } from './subjects.js';
 import { collection, getDocs, query, where, doc, setDoc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3;
+const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3, REVEAL_DELAY_MS=30*60*1000;
 let selectedSubject=null, questions=[], answers=[], current=0, timeLeft=EXAM_SECONDS, timer=null;
-let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', startingExam=false;
+let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', startingExam=false, wantsKey=true, revealTimer=null;
 const $=id=>document.getElementById(id);
 
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -21,6 +21,7 @@ function collectRegistration(){
   const studentId=normalize($('studentId').value);
   const className=normalize($('className').value);
   const department=normalize($('department').value);
+  wantsKey=(document.querySelector('input[name="wantKey"]:checked')?.value||'yes')==='yes';
 
   if(!name||!studentId||!className||!department){
     showRegError('กรุณากรอกชื่อ-นามสกุล เลขนักศึกษา ชั้น/กลุ่มเรียน และแผนกวิชาให้ครบถ้วน');
@@ -31,12 +32,13 @@ function collectRegistration(){
     return;
   }
 
-  student={name,studentId,className,department};
+  student={name,studentId,className,department,wantsKey};
   $('studentSummary').innerHTML=`
     <b>${escapeHtml(student.name)}</b>
     <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
     <span>${escapeHtml(student.className)}</span>
     <span>${escapeHtml(student.department)}</span>
+    <span>${wantsKey?'รับเฉลยหลัง 30 นาที':'ไม่รับเฉลย'}</span>
   `;
   $('screen-register').classList.add('hidden');
   $('screen-subject').classList.remove('hidden');
@@ -132,7 +134,8 @@ async function registerAttempt(){
     attemptToken,
     registeredAt:serverTimestamp(),
     registeredAtClient:new Date().toISOString(),
-    status:'started'
+    status:'started',
+    wantsKey
   });
   return regId;
 }
@@ -289,9 +292,120 @@ function payload(status){
     attemptToken,
     registrationId,
     examCount:EXAM_COUNT,
-    maxScore:20
+    maxScore:20,
+    wantsKey
   };
 }
+
+function revealStorageKey(submissionId){
+  return `nangrongReveal30::${submissionId}`;
+}
+function saveRevealState(submissionId,revealAt){
+  const state={
+    submissionId,
+    revealAt,
+    wantsKey:true,
+    subjectId:selectedSubject.id,
+    subjectCode:selectedSubject.code,
+    subjectName:selectedSubject.name,
+    questionIds:questions.map(q=>q.id),
+    selectedOriginal:answers.map((a,i)=>a<0?-1:questions[i].originalIndices[a])
+  };
+  localStorage.setItem(revealStorageKey(submissionId),JSON.stringify(state));
+  localStorage.setItem('nangrongLatestRevealKey',revealStorageKey(submissionId));
+}
+function formatReveal(sec){
+  sec=Math.max(0,Math.ceil(sec));
+  const m=Math.floor(sec/60),s=sec%60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function showDoneForReveal(state){
+  $('screen-register')?.classList.add('hidden');
+  $('screen-subject')?.classList.add('hidden');
+  $('screen-exam')?.classList.add('hidden');
+  $('screen-done')?.classList.remove('hidden');
+  $('doneSubject').textContent=`${state.subjectCode||''} ${state.subjectName||''}`.trim();
+  $('doneRef').textContent=`เลขอ้างอิงการส่ง: ${state.submissionId}`;
+  $('doneKeyText').textContent='คุณเลือกขอรับเฉลย ระบบจะเปิดเฉลยหลังส่งข้อสอบครบ 30 นาที โดยไม่แสดงคะแนน';
+}
+async function loadAnswerBank(){
+  const res=await fetch('./answer-bank-30min.json',{cache:'no-store'});
+  if(!res.ok) throw new Error('ไม่สามารถโหลดชุดเฉลยได้');
+  return await res.json();
+}
+async function revealAnswers(state){
+  clearInterval(revealTimer);
+  $('revealWaiting').classList.add('hidden');
+  const list=$('reviewList');
+  list.innerHTML='<div class="muted">กำลังโหลดเฉลย...</div>';
+
+  try{
+    const bank=await loadAnswerBank();
+    const letters=['ก','ข','ค','ง'];
+    list.innerHTML='';
+
+    state.questionIds.forEach((qid,i)=>{
+      const item=bank[qid];
+      if(!item)return;
+      const chosen=Number(state.selectedOriginal?.[i] ?? -1);
+      const correct=Number(item.correct);
+      const ok=chosen===correct;
+
+      const card=document.createElement('article');
+      card.className='review-card '+(ok?'review-correct':'review-wrong');
+      card.innerHTML=`
+        <div class="review-qno">ข้อที่ ${i+1}</div>
+        <div class="review-question">${escapeHtml(item.q)}</div>
+        <div class="review-answer ${ok?'ok':'bad'}">
+          คำตอบของคุณ: ${chosen>=0 ? `${letters[chosen]}. ${escapeHtml(item.options[chosen])}` : 'ไม่ได้ตอบ'}
+        </div>
+        <div class="review-answer correct">
+          คำตอบที่ถูก: ${letters[correct]}. ${escapeHtml(item.options[correct])}
+        </div>
+        <div class="review-explain"><b>เหตุผล:</b> ${escapeHtml(item.explain||'ไม่มีคำอธิบายเพิ่มเติม')}</div>
+      `;
+      list.appendChild(card);
+    });
+
+    $('reviewSection').classList.remove('hidden');
+  }catch(e){
+    console.error(e);
+    list.innerHTML='<div class="error">ไม่สามารถโหลดเฉลยได้ กรุณารีเฟรชหน้านี้อีกครั้ง</div>';
+    $('reviewSection').classList.remove('hidden');
+  }
+}
+function startRevealCountdown(state){
+  showDoneForReveal(state);
+  const wait=$('revealWaiting');
+  wait.classList.remove('hidden');
+
+  const tick=()=>{
+    const remain=(Number(state.revealAt)-Date.now())/1000;
+    if(remain<=0){
+      $('revealCountdown').textContent='00:00';
+      revealAnswers(state);
+      return;
+    }
+    $('revealCountdown').textContent=formatReveal(remain);
+  };
+  tick();
+  clearInterval(revealTimer);
+  revealTimer=setInterval(tick,1000);
+}
+function resumePendingReveal(){
+  const key=localStorage.getItem('nangrongLatestRevealKey');
+  if(!key)return false;
+  try{
+    const state=JSON.parse(localStorage.getItem(key)||'null');
+    if(!state||!state.wantsKey||!state.submissionId)return false;
+    showDoneForReveal(state);
+    startRevealCountdown(state);
+    return true;
+  }catch{
+    return false;
+  }
+}
+
 async function finish(status='submitted'){
   if(!active)return;
   active=false;
@@ -304,6 +418,21 @@ async function finish(status='submitted'){
       submittedAt:serverTimestamp()
     });
     $('doneRef').textContent=`เลขอ้างอิงการส่ง: ${ref.id}`;
+
+    if(wantsKey && status!=='terminated'){
+      const revealAt=Date.now()+REVEAL_DELAY_MS;
+      saveRevealState(ref.id,revealAt);
+      startRevealCountdown({
+        submissionId:ref.id,
+        revealAt,
+        wantsKey:true,
+        subjectId:selectedSubject.id,
+        subjectCode:selectedSubject.code,
+        subjectName:selectedSubject.name,
+        questionIds:questions.map(q=>q.id),
+        selectedOriginal:answers.map((a,i)=>a<0?-1:questions[i].originalIndices[a])
+      });
+    }
   }catch(e){
     console.error(e);
     active=true;
@@ -316,6 +445,15 @@ async function finish(status='submitted'){
   $('watermark').classList.add('hidden');
   $('screen-exam').classList.add('hidden');
   $('screen-done').classList.remove('hidden');
+
+  if(!wantsKey || status==='terminated'){
+    $('revealWaiting').classList.add('hidden');
+    $('reviewSection').classList.add('hidden');
+    $('doneKeyText').textContent = status==='terminated'
+      ? 'การสอบรอบนี้ถูกยุติ ระบบไม่เปิดเฉลยสำหรับรอบที่ถูกยุติ'
+      : 'คุณเลือกไม่รับเฉลย ระบบจะไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ';
+  }
+
   try{document.exitFullscreen?.()}catch{}
 }
 function violation(){
@@ -326,6 +464,9 @@ function violation(){
     finish('terminated').then(()=>$('lockOverlay').classList.remove('hidden'));
   }
 }
+
+const resumedReveal=resumePendingReveal();
+if(resumedReveal){$('screen-register')?.classList.add('hidden');}
 
 $('registerContinueBtn').onclick=collectRegistration;
 $('editStudentBtn').onclick=editStudent;

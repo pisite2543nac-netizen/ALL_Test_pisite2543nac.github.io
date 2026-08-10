@@ -130,5 +130,12 @@
         "hard": 25
       }
     }
-  ]
+  ],
+  "answerReview": {
+    "studentCanChoose": true,
+    "delayMinutesAfterSubmission": 30,
+    "showsScoreToStudent": false,
+    "showsCorrectAnswer": true,
+    "showsExplanation": true
+  }
 }

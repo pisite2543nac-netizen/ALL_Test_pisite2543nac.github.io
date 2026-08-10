@@ -37,7 +37,8 @@
     <li>หลังลงทะเบียน ระบบจะแสดงรายวิชาทั้งหมด แต่ละวิชามีช่องกรอก Code แยกจากกัน</li>
     <li>กรอก Code ของรายวิชาที่ต้องการสอบให้ถูกต้อง แล้วระบบจะเข้าสู่ข้อสอบวิชานั้น</li>
     <li>แต่ละรายวิชามีข้อสอบ 50 ข้อ ระบบสุ่มลำดับข้อและตำแหน่งตัวเลือก ก–ง สำหรับผู้เข้าสอบแต่ละคน</li>
-    <li>คะแนนเต็ม 20 คะแนน ระบบไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ ผู้ดูคะแนนได้เฉพาะ Admin</li>
+    <li>คะแนนเต็ม 20 คะแนน ระบบไม่แสดงคะแนนในหน้าผู้เข้าสอบ ผู้ดูคะแนนได้เฉพาะ Admin</li>
+    <li>ผู้เข้าสอบสามารถเลือก “รับเฉลย” หรือ “ไม่รับเฉลย” ได้ หากเลือกรับเฉลย ระบบจะเปิดเฉลยพร้อมเหตุผลรายข้อหลังส่งข้อสอบครบ 30 นาที</li>
     <li>มีเวลาทำข้อสอบ 1 ชั่วโมง 15 นาที เมื่อหมดเวลาระบบจะส่งคำตอบที่มีอยู่โดยอัตโนมัติ</li>
     <li>การส่งด้วยตนเองต้องตอบครบทุกข้อก่อน ปุ่มส่งข้อสอบจึงจะเปิดใช้งาน</li>
     <li>ระบบใช้โหมดเต็มจอและตรวจการสลับแท็บ ออกจากเต็มจอ การคัดลอก วาง และคลิกขวาระหว่างสอบ</li>
@@ -63,6 +64,15 @@
       <label>แผนกวิชา</label>
       <input id="department" placeholder="เช่น เทคโนโลยีสารสนเทศ">
     </div>
+  </div>
+
+  <div class="answer-choice">
+    <div class="answer-choice-title">ต้องการรับเฉลยหลังสอบหรือไม่?</div>
+    <div class="answer-choice-options">
+      <label><input type="radio" name="wantKey" value="yes" checked> รับเฉลยหลังส่งข้อสอบครบ 30 นาที</label>
+      <label><input type="radio" name="wantKey" value="no"> ไม่รับเฉลย</label>
+    </div>
+    <div class="muted small-text">เฉลยจะแสดงเฉพาะคำตอบและเหตุผลรายข้อ โดยคะแนนยังดูได้เฉพาะผู้ดูแลระบบ</div>
   </div>
 
   <label class="row accept">
@@ -121,9 +131,29 @@
   <div class="kicker">ส่งข้อสอบเรียบร้อยแล้ว</div>
   <h1>ระบบได้รับคำตอบของคุณแล้ว</h1>
   <p id="doneSubject"></p>
-  <p>ระบบจะไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ กรุณาติดต่อครูผู้สอนหากมีข้อสงสัยเกี่ยวกับผลการสอบ</p>
+  <p id="doneKeyText">ระบบจะไม่แสดงคะแนนในหน้าผู้เข้าสอบ</p>
   <div id="doneRef" class="muted"></div>
-<div class="row" style="margin-top:20px"><button class="btn" onclick="location.reload()">กลับหน้าลงทะเบียน</button></div>
+
+  <div id="revealWaiting" class="reveal-wait hidden">
+    <div class="reveal-label">เฉลยพร้อมเหตุผลจะเปิดในอีก</div>
+    <div id="revealCountdown" class="reveal-countdown">30:00</div>
+    <div class="muted">กรุณาเปิดหน้านี้ไว้ หรือกลับมาเปิดเว็บนี้บนเบราว์เซอร์เดิมหลังครบเวลา</div>
+  </div>
+
+  <div id="reviewSection" class="hidden">
+    <div class="review-head">
+      <div>
+        <div class="kicker">ANSWER REVIEW</div>
+        <h2>เฉลยพร้อมเหตุผลรายข้อ</h2>
+      </div>
+      <div class="review-note">ไม่แสดงคะแนน</div>
+    </div>
+    <div id="reviewList"></div>
+  </div>
+
+  <div class="row" style="margin-top:20px">
+    <button class="btn" onclick="location.reload()">กลับหน้าลงทะเบียน</button>
+  </div>
 </section>
 
 </main>
