@@ -124,12 +124,13 @@
     </div>
 
     <div id="addUserPanel" class="admin-add-user hidden">
-      <h3>เพิ่มผู้เข้าสอบโดย Admin</h3>
+      <h3>เพิ่ม User ผู้เข้าสอบโดย Admin</h3><div class="muted">ระบบจะสร้างบัญชี Login ด้วยเลขนักศึกษา + รหัสผ่านเริ่มต้น</div>
       <div class="grid two">
         <div class="field"><label>เลขนักศึกษา</label><input id="newStudentId"></div>
         <div class="field"><label>ชื่อ-นามสกุล</label><input id="newStudentName"></div>
         <div class="field"><label>ชั้น / ห้อง</label><input id="newStudentClass" placeholder="เช่น ปวช.2/1"></div>
         <div class="field"><label>แผนกวิชา</label><input id="newStudentDept"></div>
+        <div class="field"><label>รหัสผ่านเริ่มต้นของ User</label><input id="newStudentPassword" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
         <div class="field"><label>กำหนดรายวิชา (ไม่บังคับ)</label><select id="newStudentSubject"></select></div>
         <div class="field"><label>สถานะ</label>
           <select id="newStudentStatus">

@@ -489,3 +489,55 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   .pending-reveal-shortcut{align-items:stretch;flex-direction:column}
   .pending-reveal-shortcut .btn{width:100%}
 }
+
+
+/* =========================================================
+   STUDENT USER AUTH
+   ========================================================= */
+.user-auth-card{max-width:980px;margin:0 auto}
+.auth-switch{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  padding:6px;
+  margin:22px 0;
+  border-radius:14px;
+  background:#071c2e;
+  border:1px solid var(--line);
+}
+.auth-switch-btn{
+  border:0;
+  border-radius:10px;
+  padding:12px 14px;
+  font:inherit;
+  font-weight:850;
+  cursor:pointer;
+  color:#9db5c8;
+  background:transparent;
+}
+.auth-switch-btn.active{
+  color:#04131e;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+.auth-heading{margin-bottom:16px}
+.auth-heading h2{margin:3px 0 4px}
+.password-wrap{display:flex;align-items:stretch;gap:7px}
+.password-wrap input{flex:1;min-width:0}
+.password-toggle{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:0 12px;
+  background:#0b2a42;
+  color:#c9dce9;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.password-toggle:hover{border-color:var(--accent)}
+#screen-subject .header>.row{align-self:flex-start}
+@media(max-width:650px){
+  .auth-switch{grid-template-columns:1fr}
+  .password-wrap{gap:5px}
+  .password-toggle{padding:0 9px}
+}

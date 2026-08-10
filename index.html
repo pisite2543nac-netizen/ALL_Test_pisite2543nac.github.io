@@ -12,11 +12,11 @@
 
 
 
-<section id="screen-register" class="card">
+<section id="screen-auth" class="card user-auth-card">
   <div class="header">
     <div class="brand">
       <div class="kicker">NANGRONG TECHNICAL COLLEGE</div>
-      <h1>ลงทะเบียนเข้าสอบออนไลน์</h1>
+      <h1>ระบบผู้เข้าสอบออนไลน์</h1>
       <p>วิทยาลัยเทคนิคนางรอง</p>
     </div>
     <a class="btn secondary small" href="admin.html">Admin</a>
@@ -24,75 +24,104 @@
 
   <div class="notice">ผู้จัดทำ: <b>นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</b></div>
 
-  <div class="pill-row">
-    <span class="pill">11 รายวิชา</span>
-    <span class="pill">วิชาละ 50 ข้อ</span>
-    <span class="pill">คะแนนเต็ม 20 คะแนน</span>
-    <span class="pill">เวลา 75 นาที</span>
+  <div class="auth-switch">
+    <button id="showLoginBtn" class="auth-switch-btn active" type="button">เข้าสู่ระบบ</button>
+    <button id="showRegisterBtn" class="auth-switch-btn" type="button">ลงทะเบียนผู้ใช้ใหม่</button>
   </div>
 
-  <h2>คำชี้แจงการสอบ</h2>
-  <ol class="rules">
-    <li>กรอกข้อมูลผู้เข้าสอบให้ครบถ้วนและตรงกับข้อมูลจริง ก่อนดำเนินการเลือกวิชา</li>
-    <li>หลังลงทะเบียน ระบบจะแสดงรายวิชาทั้งหมด แต่ละวิชามีช่องกรอก Code แยกจากกัน</li>
-    <li>กรอก Code ของรายวิชาที่ต้องการสอบให้ถูกต้อง แล้วระบบจะเข้าสู่ข้อสอบวิชานั้น</li>
-    <li>แต่ละรายวิชามีข้อสอบ 50 ข้อ ระบบสุ่มลำดับข้อและตำแหน่งตัวเลือก ก–ง สำหรับผู้เข้าสอบแต่ละคน</li>
-    <li>คะแนนเต็ม 20 คะแนน ระบบไม่แสดงคะแนนในหน้าผู้เข้าสอบ ผู้ดูคะแนนได้เฉพาะ Admin</li>
-    <li>ผู้เข้าสอบสามารถเลือก “รับเฉลย” หรือ “ไม่รับเฉลย” ได้ หากเลือกรับเฉลย ระบบจะเปิดเฉลยพร้อมเหตุผลรายข้อหลังส่งข้อสอบครบ 30 นาที</li>
-    <li>มีเวลาทำข้อสอบ 1 ชั่วโมง 15 นาที เมื่อหมดเวลาระบบจะส่งคำตอบที่มีอยู่โดยอัตโนมัติ</li>
-    <li>การส่งด้วยตนเองต้องตอบครบทุกข้อก่อน ปุ่มส่งข้อสอบจึงจะเปิดใช้งาน</li>
-    <li>ระบบใช้โหมดเต็มจอและตรวจการสลับแท็บ ออกจากเต็มจอ การคัดลอก วาง และคลิกขวาระหว่างสอบ</li>
-    <li>หากตรวจพบพฤติกรรมต้องสงสัยเกิน 3 ครั้ง ระบบจะยุติการสอบและบันทึกสถานะ</li>
-    <li>เมื่อส่งข้อสอบแล้วจะไม่สามารถย้อนกลับมาแก้ไขคำตอบของรอบนั้นได้</li>
-  </ol>
-
-  <h2>ข้อมูลผู้เข้าสอบ</h2>
-  <div class="grid two">
-    <div class="field">
-      <label>เลขประจำตัวนักศึกษา</label>
-      <input id="studentId" inputmode="numeric" autocomplete="off" placeholder="กรอกเลขนักศึกษา">
+  <div id="loginPanel">
+    <div class="auth-heading">
+      <div class="kicker">STUDENT LOGIN</div>
+      <h2>เข้าสู่ระบบผู้เข้าสอบ</h2>
+      <p class="muted">ใช้เลขประจำตัวนักศึกษาและรหัสผ่านที่ลงทะเบียนไว้</p>
     </div>
-    <div class="field">
-      <label>ชื่อ-นามสกุล</label>
-      <input id="name" autocomplete="name" placeholder="เช่น นายสมชาย ใจดี">
+    <div class="grid two">
+      <div class="field">
+        <label>เลขประจำตัวนักศึกษา</label>
+        <input id="loginStudentId" inputmode="numeric" autocomplete="username" placeholder="กรอกเลขนักศึกษา">
+      </div>
+      <div class="field">
+        <label>รหัสผ่าน</label>
+        <div class="password-wrap">
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="กรอกรหัสผ่าน">
+          <button class="password-toggle" type="button" data-target="loginPassword">แสดง</button>
+        </div>
+      </div>
     </div>
-    <div class="field">
-      <label>ชั้น / กลุ่มเรียน</label>
-      <input id="className" placeholder="เช่น ปวช.2/1">
-    </div>
-    <div class="field">
-      <label>แผนกวิชา</label>
-      <input id="department" placeholder="เช่น เทคโนโลยีสารสนเทศ">
+    <div id="loginUserMsg" class="error hidden topgap"></div>
+    <div class="row space topgap">
+      <span class="muted">ยังไม่มีบัญชี? กด “ลงทะเบียนผู้ใช้ใหม่”</span>
+      <button id="studentLoginBtn" class="btn" type="button">เข้าสู่ระบบ</button>
     </div>
   </div>
 
-  <div class="answer-choice">
-    <div class="answer-choice-title">ต้องการรับเฉลยหลังสอบหรือไม่?</div>
-    <div class="answer-choice-options">
-      <label><input type="radio" name="wantKey" value="yes" checked> รับเฉลยหลังส่งข้อสอบครบ 30 นาที</label>
-      <label><input type="radio" name="wantKey" value="no"> ไม่รับเฉลย</label>
+  <div id="registerPanel" class="hidden">
+    <div class="auth-heading">
+      <div class="kicker">NEW STUDENT ACCOUNT</div>
+      <h2>ลงทะเบียนผู้เข้าสอบ</h2>
+      <p class="muted">ลงทะเบียนครั้งแรกเพียงครั้งเดียว จากนั้นใช้เลขนักศึกษาและรหัสผ่าน Login ได้</p>
     </div>
-    <div class="muted small-text">เฉลยจะแสดงเฉพาะคำตอบและเหตุผลรายข้อ โดยคะแนนยังดูได้เฉพาะผู้ดูแลระบบ</div>
+
+    <div class="grid two">
+      <div class="field">
+        <label>เลขประจำตัวนักศึกษา</label>
+        <input id="studentId" inputmode="numeric" autocomplete="off" placeholder="กรอกเฉพาะตัวเลข">
+      </div>
+      <div class="field">
+        <label>ชื่อ-นามสกุล</label>
+        <input id="name" autocomplete="name" placeholder="เช่น นายสมชาย ใจดี">
+      </div>
+      <div class="field">
+        <label>ชั้น / กลุ่มเรียน</label>
+        <input id="className" placeholder="เช่น ปวช.2/1">
+      </div>
+      <div class="field">
+        <label>แผนกวิชา</label>
+        <input id="department" placeholder="เช่น เทคโนโลยีสารสนเทศ">
+      </div>
+      <div class="field">
+        <label>สร้างรหัสผ่าน</label>
+        <div class="password-wrap">
+          <input id="registerPassword" type="password" autocomplete="new-password" placeholder="อย่างน้อย 6 ตัวอักษร">
+          <button class="password-toggle" type="button" data-target="registerPassword">แสดง</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>ยืนยันรหัสผ่าน</label>
+        <div class="password-wrap">
+          <input id="registerPassword2" type="password" autocomplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง">
+          <button class="password-toggle" type="button" data-target="registerPassword2">แสดง</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="answer-choice">
+      <div class="answer-choice-title">ต้องการรับเฉลยหลังสอบหรือไม่?</div>
+      <div class="answer-choice-options">
+        <label><input type="radio" name="wantKey" value="yes" checked> รับเฉลยหลังส่งข้อสอบครบ 30 นาที</label>
+        <label><input type="radio" name="wantKey" value="no"> ไม่รับเฉลย</label>
+      </div>
+    </div>
+
+    <label class="row accept">
+      <input type="checkbox" id="accept">
+      <span>ข้าพเจ้ายืนยันว่าข้อมูลถูกต้อง และยอมรับคำชี้แจงการสอบ</span>
+    </label>
+
+    <div id="registerMsg" class="error hidden"></div>
+
+    <div class="row space topgap">
+      <span class="muted">เมื่อลงทะเบียนสำเร็จ ชื่อจะปรากฏในหน้า Admin ทันที</span>
+      <button class="btn" id="registerContinueBtn" type="button">ลงทะเบียนและสร้างบัญชี</button>
+    </div>
   </div>
-
-  <label class="row accept">
-    <input type="checkbox" id="accept">
-    <span>ข้าพเจ้าได้อ่านและยอมรับคำชี้แจงการสอบแล้ว</span>
-  </label>
-
-  <div id="registerMsg" class="error hidden"></div>
 
   <div id="pendingRevealShortcut" class="pending-reveal-shortcut hidden">
     <div>
       <b>มีเฉลยจากการสอบก่อนหน้าที่กำลังรอเปิด</b>
-      <div id="pendingRevealShortcutText" class="muted">สามารถกลับมาตรวจสอบได้โดยไม่ต้องค้างอยู่หน้าเดิม</div>
+      <div id="pendingRevealShortcutText" class="muted"></div>
     </div>
     <button id="openPendingRevealBtn" class="btn secondary small" type="button">ดูสถานะเฉลย</button>
-  </div>
-
-  <div class="row space">
-    <span class="muted">เมื่อกดลงทะเบียน ชื่อจะถูกบันทึกและแสดงในหน้า Admin ทันที</span>
-    <button class="btn" id="registerContinueBtn">ลงทะเบียนและเลือกวิชา</button>
   </div>
 </section>
 
@@ -103,7 +132,10 @@
       <h1>เลือกรายวิชาที่ต้องการสอบ</h1>
       <p>ลงทะเบียนสำเร็จแล้ว กรุณากรอกรหัสล็อกอินในการ์ดของรายวิชาที่ต้องการสอบ</p>
     </div>
-    <button id="editStudentBtn" class="btn secondary small">← แก้ไขข้อมูลผู้เข้าสอบ</button>
+    <div class="row">
+      <button id="studentHomeBtn" class="btn secondary small" type="button">หน้าหลัก</button>
+      <button id="studentLogoutTopBtn" class="btn danger small" type="button">Logout</button>
+    </div>
   </div>
 
   <div id="studentSummary" class="student-preview"></div>

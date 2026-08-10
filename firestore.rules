@@ -8,9 +8,33 @@ service cloud.firestore {
         && request.auth.uid == "otCHJNeKfgbohIs1lVn7O7RD5m73";
     }
 
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // =====================================================
+    // STUDENT USER PROFILE
+    // =====================================================
+    match /studentUsers/{uid} {
+      allow create: if isOwner(uid)
+        && request.resource.data.studentId is string
+        && request.resource.data.name is string
+        && request.resource.data.className is string
+        && request.resource.data.department is string;
+
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Student can maintain own profile; Admin can manage all users.
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
     // =====================================================
     // QUESTIONS
-    // Student: read only | Admin: full management
     // =====================================================
     match /questions/{questionId} {
       allow read: if true;
@@ -19,7 +43,6 @@ service cloud.firestore {
 
     // =====================================================
     // ANSWER KEYS
-    // Admin only
     // =====================================================
     match /answerKeys/{questionId} {
       allow read, create, update, delete: if isAdmin();
@@ -27,7 +50,6 @@ service cloud.firestore {
 
     // =====================================================
     // STUDENT CHECK-INS
-    // บันทึกทันทีหลังนักศึกษากดลงทะเบียน ก่อนเลือกวิชา
     // =====================================================
     match /studentCheckins/{checkinId} {
       function validCheckin() {
@@ -39,29 +61,39 @@ service cloud.firestore {
       }
 
       allow create: if
-        (request.auth == null || isAdmin())
-        && validCheckin()
-        && request.resource.data.status == "registered";
+        (
+          isAdmin()
+          || (
+            signedIn()
+            && request.resource.data.ownerUid == request.auth.uid
+          )
+          // backward compatibility for old anonymous records
+          || request.auth == null
+        )
+        && validCheckin();
 
-      // Student may only move the same check-in through exam states.
       allow update: if
         isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid
+          && validCheckin()
+        )
         || (
           request.auth == null
           && validCheckin()
           && resource.data.studentId == request.resource.data.studentId
           && resource.data.name == request.resource.data.name
-          && request.resource.data.status in ["registered", "exam_started", "completed", "terminated"]
         );
 
       allow read, delete: if isAdmin();
     }
 
     // =====================================================
-    // REGISTRATIONS
+    // EXAM REGISTRATIONS
     // =====================================================
     match /registrations/{registrationId} {
-
       function validRegistration() {
         return request.resource.data.studentId is string
           && request.resource.data.name is string
@@ -74,15 +106,25 @@ service cloud.firestore {
           && request.resource.data.status == "started";
       }
 
-      // First registration. Also allows Admin to test Student page in same browser.
       allow create: if
-        (request.auth == null || isAdmin())
+        (
+          isAdmin()
+          || (
+            signedIn()
+            && request.resource.data.ownerUid == request.auth.uid
+          )
+          || request.auth == null
+        )
         && validRegistration();
 
-      // setDoc() uses update if the deterministic registration document already exists.
-      // Admin may reset/test. Anonymous update is limited to same student + same subject.
       allow update: if
         isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid
+          && validRegistration()
+        )
         || (
           request.auth == null
           && validRegistration()
@@ -98,7 +140,14 @@ service cloud.firestore {
     // =====================================================
     match /submissions/{submissionId} {
       allow create: if
-        (request.auth == null || isAdmin())
+        (
+          isAdmin()
+          || (
+            signedIn()
+            && request.resource.data.ownerUid == request.auth.uid
+          )
+          || request.auth == null
+        )
         && request.resource.data.registrationId is string
         && request.resource.data.attemptToken is string
         && request.resource.data.subjectId is string
@@ -125,7 +174,6 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Optional future subject/settings collections
     match /subjects/{subjectId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -136,7 +184,6 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Everything else is denied.
     match /{document=**} {
       allow read, write: if false;
     }

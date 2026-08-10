@@ -1,11 +1,16 @@
 import { auth, db, isFirebaseConfigured } from './firebase-service.js';
-import { ADMIN_USERNAME, ADMIN_AUTH_EMAIL, ADMIN_UID } from './firebase-config.js';
+import { firebaseConfig, ADMIN_USERNAME, ADMIN_AUTH_EMAIL, ADMIN_UID } from './firebase-config.js';
 import { SUBJECTS } from './subjects.js';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { collection, getDocs, doc, deleteDoc, writeBatch, serverTimestamp, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);
 let questionRows=[],answerMap=new Map(),editId=null,lastRegs=[],lastSubs=[],liveUnsubs=[],bankEnsured=false;
+const provisionApp=initializeApp(firebaseConfig,'nangrongProvisionApp');
+const provisionAuth=getAuth(provisionApp);
+const studentEmail=id=>`${id}@student.nangrong.invalid`;
 
 function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML}
 function norm(s){return String(s??'').trim()}
@@ -256,26 +261,40 @@ $('cancelAddUser').onclick=()=>$('addUserPanel').classList.add('hidden');
 $('saveNewUser').onclick=async()=>{
   $('addUserMsg').classList.add('hidden');
   const studentId=norm($('newStudentId').value),name=norm($('newStudentName').value),className=norm($('newStudentClass').value),department=norm($('newStudentDept').value);
+  const password=$('newStudentPassword').value;
   const subjectId=$('newStudentSubject').value,status=$('newStudentStatus').value;
   if(!studentId||!name||!className||!department){
-    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ ชั้น/ห้อง และแผนกให้ครบ';
-    $('addUserMsg').classList.remove('hidden');return;
+    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ ชั้น/ห้อง และแผนกให้ครบ';$('addUserMsg').classList.remove('hidden');return;
+  }
+  if(!/^\d+$/.test(studentId)){
+    $('addUserMsg').textContent='เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น';$('addUserMsg').classList.remove('hidden');return;
+  }
+  if(password.length<6){
+    $('addUserMsg').textContent='รหัสผ่านเริ่มต้นต้องมีอย่างน้อย 6 ตัวอักษร';$('addUserMsg').classList.remove('hidden');return;
   }
   const s=subjectId?subjectById(subjectId):null;
-  const id=`admin-${Date.now()}-${crypto.randomUUID()}`;
   $('saveNewUser').disabled=true;
   try{
-    await setDoc(doc(db,'studentCheckins',id),{
-      studentId,name,className,department,status,
-      subjectId:s?.id||'',subjectCode:s?.code||'',subjectName:s?.name||'',
-      wantsKey:true,createdByAdmin:true,
-      registeredAt:serverTimestamp(),registeredAtClient:new Date().toISOString()
+    const cred=await createUserWithEmailAndPassword(provisionAuth,studentEmail(studentId),password);
+    await setDoc(doc(db,'studentUsers',cred.user.uid),{
+      studentId,name,className,department,wantsKey:true,email:studentEmail(studentId),
+      active:true,createdByAdmin:true,createdAt:serverTimestamp(),createdAtClient:new Date().toISOString()
     });
-    ['newStudentId','newStudentName','newStudentClass','newStudentDept'].forEach(id=>$(id).value='');
-    $('newStudentSubject').value='';$('newStudentStatus').value='registered';
-    $('addUserPanel').classList.add('hidden');
+    await setDoc(doc(db,'studentCheckins',`admin-${Date.now()}-${crypto.randomUUID()}`),{
+      ownerUid:cred.user.uid,studentId,name,className,department,status,
+      subjectId:s?.id||'',subjectCode:s?.code||'',subjectName:s?.name||'',
+      wantsKey:true,createdByAdmin:true,registeredAt:serverTimestamp(),registeredAtClient:new Date().toISOString()
+    });
+    await signOut(provisionAuth);
+    ['newStudentId','newStudentName','newStudentClass','newStudentDept','newStudentPassword'].forEach(id=>$(id).value='');
+    $('newStudentSubject').value='';$('newStudentStatus').value='registered';$('addUserPanel').classList.add('hidden');
+    alert(`สร้าง User ${studentId} สำเร็จ`);
   }catch(e){
-    console.error(e);$('addUserMsg').textContent='เพิ่ม User ไม่สำเร็จ: '+(e.message||e);$('addUserMsg').classList.remove('hidden');
+    console.error(e);
+    let msg='เพิ่ม User ไม่สำเร็จ: '+(e.message||e);
+    if(e?.code==='auth/email-already-in-use')msg='เลขนักศึกษานี้มีบัญชี Login อยู่แล้ว';
+    $('addUserMsg').textContent=msg;$('addUserMsg').classList.remove('hidden');
+    try{await signOut(provisionAuth)}catch{}
   }finally{$('saveNewUser').disabled=false}
 };
 

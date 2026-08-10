@@ -1,20 +1,69 @@
-import { db, isFirebaseConfigured } from './firebase-service.js';
+import { studentAuth, studentDb, isFirebaseConfigured } from './firebase-service.js';
+import { ADMIN_UID } from './firebase-config.js';
 import { SUBJECTS, EXAM_ROOM_CODE } from './subjects.js';
-import { collection, getDocs, query, where, doc, setDoc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
+} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import {
+  collection, getDocs, getDoc, query, where, doc, setDoc, addDoc, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3, REVEAL_DELAY_MS=30*60*1000;
 let selectedSubject=null, questions=[], answers=[], current=0, timeLeft=EXAM_SECONDS, timer=null;
 let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', checkinId='', startingExam=false, wantsKey=true, revealTimer=null;
+let authReady=false;
 const $=id=>document.getElementById(id);
 
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function normalize(s){return String(s||'').trim()}
 function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function showRegError(msg){$('registerMsg').textContent=msg;$('registerMsg').classList.remove('hidden')}
 function randomToken(){return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}
 async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function applyTheme(theme){document.body.dataset.theme=theme||''}
+function studentEmail(studentId){return `${studentId}@student.nangrong.invalid`}
+function validStudentId(v){return /^\d+$/.test(v)}
+function showMsg(id,msg){const e=$(id);e.textContent=msg;e.classList.remove('hidden')}
+function hideMsg(id){$(id)?.classList.add('hidden')}
 
+function showLogin(){
+  $('loginPanel').classList.remove('hidden');
+  $('registerPanel').classList.add('hidden');
+  $('showLoginBtn').classList.add('active');
+  $('showRegisterBtn').classList.remove('active');
+}
+function showRegister(){
+  $('loginPanel').classList.add('hidden');
+  $('registerPanel').classList.remove('hidden');
+  $('showLoginBtn').classList.remove('active');
+  $('showRegisterBtn').classList.add('active');
+}
+function showAuthHome(){
+  ['screen-subject','screen-exam','screen-done'].forEach(id=>$(id)?.classList.add('hidden'));
+  $('screen-auth').classList.remove('hidden');
+  updatePendingRevealShortcut();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showSubjectHome(){
+  if(!student){showAuthHome();return}
+  $('screen-auth').classList.add('hidden');
+  $('screen-done').classList.add('hidden');
+  $('screen-exam').classList.add('hidden');
+  $('screen-subject').classList.remove('hidden');
+  $('studentSummary').innerHTML=`
+    <b>${escapeHtml(student.name)}</b>
+    <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
+    <span>${escapeHtml(student.className)}</span>
+    <span>${escapeHtml(student.department)}</span>
+    <span>${wantsKey?'รับเฉลยหลัง 30 นาที':'ไม่รับเฉลย'}</span>
+  `;
+  renderSubjects();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 
 async function loadBuiltInQuestionBank(){
   const res=await fetch('./initial-question-bank-all-subjects.json',{cache:'no-store'});
@@ -23,9 +72,11 @@ async function loadBuiltInQuestionBank(){
   if(!Array.isArray(arr)) throw new Error('คลังข้อสอบสำเร็จรูปไม่ถูกต้อง');
   return arr;
 }
-async function createStudentCheckin(){
+
+async function createStudentCheckin(uid, createdBy='student'){
   checkinId=randomToken();
-  await setDoc(doc(db,'studentCheckins',checkinId),{
+  await setDoc(doc(studentDb,'studentCheckins',checkinId),{
+    ownerUid:uid,
     studentId:student.studentId,
     name:student.name,
     className:student.className,
@@ -35,13 +86,16 @@ async function createStudentCheckin(){
     subjectId:'',
     subjectCode:'',
     subjectName:'',
+    createdBy,
     registeredAt:serverTimestamp(),
     registeredAtClient:new Date().toISOString()
   });
 }
+
 async function updateStudentCheckinForSubject(){
   if(!checkinId)return;
-  await setDoc(doc(db,'studentCheckins',checkinId),{
+  await setDoc(doc(studentDb,'studentCheckins',checkinId),{
+    ownerUid:studentAuth.currentUser?.uid||'',
     subjectId:selectedSubject.id,
     subjectCode:selectedSubject.code,
     subjectName:selectedSubject.name,
@@ -51,65 +105,111 @@ async function updateStudentCheckinForSubject(){
   },{merge:true});
 }
 
-async function collectRegistration(){
-  $('registerMsg').classList.add('hidden');
-  const name=normalize($('name').value);
+async function registerUser(){
+  hideMsg('registerMsg');
+  if(!isFirebaseConfigured()){showMsg('registerMsg','เว็บไซต์ยังไม่ได้เชื่อม Firebase');return}
+
   const studentId=normalize($('studentId').value);
+  const name=normalize($('name').value);
   const className=normalize($('className').value);
   const department=normalize($('department').value);
+  const password=$('registerPassword').value;
+  const password2=$('registerPassword2').value;
   wantsKey=(document.querySelector('input[name="wantKey"]:checked')?.value||'yes')==='yes';
 
-  if(!name||!studentId||!className||!department){
-    showRegError('กรุณากรอกชื่อ-นามสกุล เลขนักศึกษา ชั้น/กลุ่มเรียน และแผนกวิชาให้ครบถ้วน');
-    return;
+  if(!studentId||!name||!className||!department){
+    showMsg('registerMsg','กรุณากรอกข้อมูลผู้เข้าสอบให้ครบถ้วน');return
+  }
+  if(!validStudentId(studentId)){
+    showMsg('registerMsg','เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น');return
+  }
+  if(password.length<6){
+    showMsg('registerMsg','รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return
+  }
+  if(password!==password2){
+    showMsg('registerMsg','รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน');return
   }
   if(!$('accept').checked){
-    showRegError('กรุณายืนยันว่าได้อ่านและยอมรับคำชี้แจงการสอบแล้ว');
-    return;
+    showMsg('registerMsg','กรุณายืนยันข้อมูลและยอมรับคำชี้แจงการสอบ');return
   }
 
-  student={name,studentId,className,department,wantsKey};
-
-  if(!isFirebaseConfigured()){
-    showRegError('เว็บไซต์ยังไม่ได้เชื่อม Firebase กรุณาแจ้งผู้ดูแลระบบ');
-    return;
-  }
-
-  $('registerContinueBtn').disabled=true;
-  $('registerContinueBtn').textContent='กำลังบันทึกข้อมูล...';
+  const btn=$('registerContinueBtn');btn.disabled=true;btn.textContent='กำลังสร้างบัญชี...';
   try{
-    await createStudentCheckin();
+    await setPersistence(studentAuth,browserLocalPersistence);
+    const cred=await createUserWithEmailAndPassword(studentAuth,studentEmail(studentId),password);
+
+    student={studentId,name,className,department,wantsKey,uid:cred.user.uid};
+    await setDoc(doc(studentDb,'studentUsers',cred.user.uid),{
+      studentId,name,className,department,wantsKey,
+      email:studentEmail(studentId),
+      active:true,
+      createdAt:serverTimestamp(),
+      createdAtClient:new Date().toISOString()
+    });
+    await createStudentCheckin(cred.user.uid,'self_register');
+    showSubjectHome();
   }catch(e){
     console.error(e);
-    showRegError(e?.code==='permission-denied'
-      ? 'ลงทะเบียนไม่สำเร็จ: Firestore Rules ยังไม่อนุญาต studentCheckins'
-      : 'ลงทะเบียนไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
-    $('registerContinueBtn').disabled=false;
-    $('registerContinueBtn').textContent='ลงทะเบียนและเลือกวิชา';
-    return;
-  }
-  $('registerContinueBtn').disabled=false;
-  $('registerContinueBtn').textContent='ลงทะเบียนและเลือกวิชา';
-
-  $('studentSummary').innerHTML=`
-    <b>${escapeHtml(student.name)}</b>
-    <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
-    <span>${escapeHtml(student.className)}</span>
-    <span>${escapeHtml(student.department)}</span>
-    <span>${wantsKey?'รับเฉลยหลัง 30 นาที':'ไม่รับเฉลย'}</span>
-  `;
-  $('screen-register').classList.add('hidden');
-  $('screen-subject').classList.remove('hidden');
-  renderSubjects();
-  window.scrollTo({top:0,behavior:'smooth'});
+    let msg='ลงทะเบียนไม่สำเร็จ กรุณาลองใหม่';
+    if(e?.code==='auth/email-already-in-use')msg='เลขนักศึกษานี้มีบัญชีแล้ว กรุณาเข้าสู่ระบบ';
+    else if(e?.code==='auth/weak-password')msg='รหัสผ่านสั้นเกินไป กรุณาใช้อย่างน้อย 6 ตัวอักษร';
+    else if(e?.code==='permission-denied')msg='สร้างบัญชีแล้วแต่บันทึกข้อมูลไม่ได้ กรุณาตรวจสอบ Firestore Rules';
+    showMsg('registerMsg',msg);
+  }finally{btn.disabled=false;btn.textContent='ลงทะเบียนและสร้างบัญชี'}
 }
 
-function editStudent(){
-  if(startingExam) return;
-  $('screen-subject').classList.add('hidden');
-  $('screen-register').classList.remove('hidden');
-  applyTheme('');
-  window.scrollTo({top:0,behavior:'smooth'});
+async function loginUser(){
+  hideMsg('loginUserMsg');
+  const studentId=normalize($('loginStudentId').value);
+  const password=$('loginPassword').value;
+  if(!studentId||!password){showMsg('loginUserMsg','กรุณากรอกเลขนักศึกษาและรหัสผ่าน');return}
+  if(!validStudentId(studentId)){showMsg('loginUserMsg','เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น');return}
+
+  const btn=$('studentLoginBtn');btn.disabled=true;btn.textContent='กำลังเข้าสู่ระบบ...';
+  try{
+    await setPersistence(studentAuth,browserLocalPersistence);
+    const cred=await signInWithEmailAndPassword(studentAuth,studentEmail(studentId),password);
+    if(cred.user.uid===ADMIN_UID){
+      await signOut(studentAuth);
+      throw new Error('บัญชีนี้ไม่ใช่บัญชีนักศึกษา');
+    }
+    await loadLoggedInStudent(cred.user);
+    // บันทึกการ Login ครั้งนี้ให้ Admin เห็น
+    await createStudentCheckin(cred.user.uid,'login');
+    showSubjectHome();
+  }catch(e){
+    console.error(e);
+    let msg='เลขนักศึกษาหรือรหัสผ่านไม่ถูกต้อง';
+    if(e?.code==='permission-denied')msg='เข้าสู่ระบบสำเร็จ แต่ไม่สามารถอ่านข้อมูลนักศึกษาได้ กรุณาตรวจสอบ Firestore Rules';
+    showMsg('loginUserMsg',msg);
+  }finally{btn.disabled=false;btn.textContent='เข้าสู่ระบบ'}
+}
+
+async function loadLoggedInStudent(user){
+  const snap=await getDoc(doc(studentDb,'studentUsers',user.uid));
+  if(!snap.exists())throw new Error('ไม่พบข้อมูลผู้เข้าสอบ');
+  const p=snap.data();
+  if(p.active===false)throw new Error('บัญชีถูกระงับ');
+  student={
+    uid:user.uid,
+    studentId:p.studentId||'',
+    name:p.name||'',
+    className:p.className||'',
+    department:p.department||'',
+    wantsKey:p.wantsKey!==false
+  };
+  wantsKey=student.wantsKey;
+}
+
+async function logoutUser(){
+  if(active){
+    if(!confirm('กำลังทำข้อสอบอยู่ ต้องการออกจากระบบจริงหรือไม่?'))return;
+  }
+  clearInterval(timer);clearInterval(revealTimer);
+  active=false;student=null;selectedSubject=null;checkinId='';registrationId='';attemptToken='';
+  try{await signOut(studentAuth)}catch{}
+  showLogin();
+  showAuthHome();
 }
 
 function renderSubjects(){
@@ -167,7 +267,7 @@ function subjectMessage(s,msg,ok=false){
 async function fetchExam(){
   let bank=[];
   try{
-    const qref=query(collection(db,'questions'),where('subjectId','==',selectedSubject.id));
+    const qref=query(collection(studentDb,'questions'),where('subjectId','==',selectedSubject.id));
     const snap=await getDocs(qref);
     bank=snap.docs.map(d=>({id:d.id,...d.data()}))
       .filter(q=>q.active!==false && Array.isArray(q.options) && q.options.length===4);
@@ -206,8 +306,9 @@ async function registerAttempt(){
   // 1 student + 1 subject = deterministic registration record
   const regId=await sha256(`${selectedSubject.id}::${student.studentId}`);
   attemptToken=randomToken();
-  await setDoc(doc(db,'registrations',regId),{
+  await setDoc(doc(studentDb,'registrations',regId),{
     ...student,
+    ownerUid:studentAuth.currentUser?.uid||'',
     subjectId:selectedSubject.id,
     subjectCode:selectedSubject.code,
     subjectName:selectedSubject.name,
@@ -360,6 +461,7 @@ function payload(status){
   const questionIds=questions.map(q=>q.id);
   const selectedOriginal=answers.map((a,i)=>a<0?-1:questions[i].originalIndices[a]);
   return {
+    ownerUid:studentAuth.currentUser?.uid||'',
     student,
     subjectId:selectedSubject.id,
     subjectCode:selectedSubject.code,
@@ -546,29 +648,7 @@ function chooseAnotherSubject(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-function logoutStudent(){
-  clearInterval(revealTimer);
-  active=false;
-  student=null;
-  selectedSubject=null;
-  registrationId='';
-  checkinId='';
-  attemptToken='';
-  questions=[];
-  answers=[];
-  current=0;
-
-  ['studentId','name','className','department'].forEach(id=>{
-    if($(id))$(id).value='';
-  });
-  if($('accept'))$('accept').checked=false;
-
-  hideAllStudentScreens();
-  $('screen-register').classList.remove('hidden');
-  $('watermark')?.classList.add('hidden');
-  updatePendingRevealShortcut();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
+function legacyLogoutStudent(){ logoutUser(); }
 
 function openPendingReveal(){
   const state=getPendingRevealState();
@@ -589,7 +669,7 @@ async function finish(status='submitted'){
   $('submitBtn').disabled=true;
 
   try{
-    const ref=await addDoc(collection(db,'submissions'),{
+    const ref=await addDoc(collection(studentDb,'submissions'),{
       ...payload(status),
       submittedAt:serverTimestamp()
     });
@@ -597,7 +677,7 @@ async function finish(status='submitted'){
 
     if(checkinId){
       try{
-        await setDoc(doc(db,'studentCheckins',checkinId),{
+        await setDoc(doc(studentDb,'studentCheckins',checkinId),{
           status: status==='terminated' ? 'terminated' : 'completed',
           submissionId:ref.id,
           completedAt:serverTimestamp(),
@@ -656,12 +736,30 @@ function violation(){
 // หากมีเฉลยที่กำลังรอ จะมีปุ่ม "ดูสถานะเฉลย" ที่หน้าหลักแทน
 updatePendingRevealShortcut();
 
-$('registerContinueBtn').onclick=collectRegistration;
-$('backHomeBtn').onclick=goStudentHome;
-$('anotherSubjectBtn').onclick=chooseAnotherSubject;
-$('logoutStudentBtn').onclick=logoutStudent;
+
+// ---------- UI bindings ----------
+$('showLoginBtn').onclick=showLogin;
+$('showRegisterBtn').onclick=showRegister;
+$('registerContinueBtn').onclick=registerUser;
+$('studentLoginBtn').onclick=loginUser;
+$('studentLogoutTopBtn').onclick=logoutUser;
+$('studentHomeBtn').onclick=showAuthHome;
+$('backHomeBtn').onclick=showAuthHome;
+$('anotherSubjectBtn').onclick=showSubjectHome;
+$('logoutStudentBtn').onclick=logoutUser;
 $('openPendingRevealBtn').onclick=openPendingReveal;
-$('editStudentBtn').onclick=editStudent;
+
+document.querySelectorAll('.password-toggle').forEach(btn=>{
+  btn.onclick=()=>{
+    const input=$(btn.dataset.target);
+    const show=input.type==='password';
+    input.type=show?'text':'password';
+    btn.textContent=show?'ซ่อน':'แสดง';
+  };
+});
+$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser()});
+$('loginStudentId').addEventListener('keydown',e=>{if(e.key==='Enter')loginUser()});
+
 $('prevBtn').onclick=()=>{current=Math.max(0,current-1);render()};
 $('nextBtn').onclick=()=>{current=Math.min(EXAM_COUNT-1,current+1);render()};
 $('submitBtn').onclick=()=>{
@@ -681,4 +779,29 @@ document.addEventListener('keydown',e=>{
 });
 window.addEventListener('beforeunload',e=>{
   if(active){e.preventDefault();e.returnValue=''}
+});
+
+// ไม่บังคับ Auto Resume หน้าเฉลย
+updatePendingRevealShortcut();
+
+// Auto-login Student จาก session ที่จำไว้
+setPersistence(studentAuth,browserLocalPersistence).catch(()=>{});
+onAuthStateChanged(studentAuth,async user=>{
+  if(!authReady)authReady=true;
+  if(!user){
+    student=null;
+    showLogin();
+    showAuthHome();
+    return;
+  }
+  try{
+    if(user.uid===ADMIN_UID){await signOut(studentAuth);return}
+    await loadLoggedInStudent(user);
+    showSubjectHome();
+  }catch(e){
+    console.error(e);
+    await signOut(studentAuth);
+    showLogin();
+    showAuthHome();
+  }
 });

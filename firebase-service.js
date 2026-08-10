@@ -9,6 +9,14 @@ export function isFirebaseConfigured(){
 }
 
 if(!isFirebaseConfigured()) console.warn('Firebase ยังไม่ได้ตั้งค่าใน firebase-config.js');
+
+// Default app = Admin
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Secondary app = Student
+// แยก Auth persistence ออกจาก Admin เพื่อให้เปิดหน้า Admin และ Student พร้อมกันได้
+export const studentApp = initializeApp(firebaseConfig, "nangrongStudentApp");
+export const studentAuth = getAuth(studentApp);
+export const studentDb = getFirestore(studentApp);
