@@ -15,6 +15,7 @@
   <div class="grid four">
     <div class="metric"><div class="muted">ข้อสอบในคลัง</div><b id="mQuestions">0</b></div>
     <div class="metric"><div class="muted">รายวิชาพร้อมสอบ</div><b id="mSubjects">0</b></div>
+    <div class="metric"><div class="muted">ลงทะเบียนแล้ว</div><b id="mRegs">0</b></div>
     <div class="metric"><div class="muted">ส่งข้อสอบ</div><b id="mSubs">0</b></div>
     <div class="metric"><div class="muted">คะแนนเฉลี่ย /20</div><b id="mAvg">0.00</b></div>
   </div>
@@ -28,11 +29,11 @@
 
   <section id="tab-registrations" class="card hidden">
     <div class="row space"><h2>ข้อมูลผู้ลงทะเบียน</h2><div class="row"><select id="regSubjectFilter" class="filter-select"></select><button id="clearRegs" class="btn danger small">ลบข้อมูลทั้งหมด</button></div></div>
-    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>จัดการ</th></tr></thead><tbody id="regRows"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="regRows"></tbody></table></div>
   </section>
 
   <section id="tab-questions" class="card hidden">
-    <div class="row space"><div><h2>จัดการคลังข้อสอบ</h2><div class="muted">แต่ละวิชาต้องมีอย่างน้อย 50 ข้อจึงจะเปิดสอบได้</div></div><button id="resetQuestions" class="btn secondary small">นำเข้าคลังข้อสอบ JSON</button></div>
+    <div class="row space"><div><h2>จัดการคลังข้อสอบ</h2><div class="muted">ข้อสอบสำเร็จรูป 550 ข้อถูกฝังมากับเว็บแล้ว และ Admin ยังเพิ่ม แก้ไข หรือลบได้</div></div><button id="resetQuestions" class="btn secondary small">คืนค่าข้อสอบสำเร็จรูป 550 ข้อ</button></div>
     <div class="row filter-row"><label class="muted">กรองรายการ:</label><select id="questionSubjectFilter" class="filter-select"></select></div>
     <div class="grid two">
       <div class="field"><label>รายวิชา</label><select id="qSubject"></select></div>

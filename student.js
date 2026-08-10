@@ -4,7 +4,7 @@ import { collection, getDocs, query, where, doc, setDoc, addDoc, serverTimestamp
 
 const EXAM_COUNT=50, EXAM_SECONDS=75*60, MAX_VIOLATIONS=3, REVEAL_DELAY_MS=30*60*1000;
 let selectedSubject=null, questions=[], answers=[], current=0, timeLeft=EXAM_SECONDS, timer=null;
-let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', startingExam=false, wantsKey=true, revealTimer=null;
+let active=false, violations=0, student=null, startedAt=null, attemptToken='', registrationId='', checkinId='', startingExam=false, wantsKey=true, revealTimer=null;
 const $=id=>document.getElementById(id);
 
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -15,7 +15,43 @@ function randomToken(){return crypto.randomUUID?.() || `${Date.now()}-${Math.ran
 async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function applyTheme(theme){document.body.dataset.theme=theme||''}
 
-function collectRegistration(){
+
+async function loadBuiltInQuestionBank(){
+  const res=await fetch('./initial-question-bank-all-subjects.json',{cache:'no-store'});
+  if(!res.ok) throw new Error('ไม่สามารถโหลดคลังข้อสอบสำเร็จรูปได้');
+  const arr=await res.json();
+  if(!Array.isArray(arr)) throw new Error('คลังข้อสอบสำเร็จรูปไม่ถูกต้อง');
+  return arr;
+}
+async function createStudentCheckin(){
+  checkinId=randomToken();
+  await setDoc(doc(db,'studentCheckins',checkinId),{
+    studentId:student.studentId,
+    name:student.name,
+    className:student.className,
+    department:student.department,
+    wantsKey,
+    status:'registered',
+    subjectId:'',
+    subjectCode:'',
+    subjectName:'',
+    registeredAt:serverTimestamp(),
+    registeredAtClient:new Date().toISOString()
+  });
+}
+async function updateStudentCheckinForSubject(){
+  if(!checkinId)return;
+  await setDoc(doc(db,'studentCheckins',checkinId),{
+    subjectId:selectedSubject.id,
+    subjectCode:selectedSubject.code,
+    subjectName:selectedSubject.name,
+    status:'exam_started',
+    examStartedAt:serverTimestamp(),
+    examStartedAtClient:new Date().toISOString()
+  },{merge:true});
+}
+
+async function collectRegistration(){
   $('registerMsg').classList.add('hidden');
   const name=normalize($('name').value);
   const studentId=normalize($('studentId').value);
@@ -33,6 +69,28 @@ function collectRegistration(){
   }
 
   student={name,studentId,className,department,wantsKey};
+
+  if(!isFirebaseConfigured()){
+    showRegError('เว็บไซต์ยังไม่ได้เชื่อม Firebase กรุณาแจ้งผู้ดูแลระบบ');
+    return;
+  }
+
+  $('registerContinueBtn').disabled=true;
+  $('registerContinueBtn').textContent='กำลังบันทึกข้อมูล...';
+  try{
+    await createStudentCheckin();
+  }catch(e){
+    console.error(e);
+    showRegError(e?.code==='permission-denied'
+      ? 'ลงทะเบียนไม่สำเร็จ: Firestore Rules ยังไม่อนุญาต studentCheckins'
+      : 'ลงทะเบียนไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    $('registerContinueBtn').disabled=false;
+    $('registerContinueBtn').textContent='ลงทะเบียนและเลือกวิชา';
+    return;
+  }
+  $('registerContinueBtn').disabled=false;
+  $('registerContinueBtn').textContent='ลงทะเบียนและเลือกวิชา';
+
   $('studentSummary').innerHTML=`
     <b>${escapeHtml(student.name)}</b>
     <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
@@ -107,10 +165,32 @@ function subjectMessage(s,msg,ok=false){
 }
 
 async function fetchExam(){
-  const qref=query(collection(db,'questions'),where('subjectId','==',selectedSubject.id));
-  const snap=await getDocs(qref);
-  const bank=snap.docs.map(d=>({id:d.id,...d.data()}))
-    .filter(q=>q.active!==false && Array.isArray(q.options) && q.options.length===4);
+  let bank=[];
+  try{
+    const qref=query(collection(db,'questions'),where('subjectId','==',selectedSubject.id));
+    const snap=await getDocs(qref);
+    bank=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .filter(q=>q.active!==false && Array.isArray(q.options) && q.options.length===4);
+  }catch(e){
+    console.warn('Firestore question read failed; using built-in bank',e);
+  }
+
+  // เว็บสำเร็จรูป: ถ้า Firestore ยังไม่มีคลังครบ ใช้ข้อสอบที่มากับเว็บได้ทันที
+  if(bank.length<EXAM_COUNT){
+    const builtIn=await loadBuiltInQuestionBank();
+    bank=builtIn
+      .filter(q=>q.subjectId===selectedSubject.id)
+      .map(q=>({
+        id:q.id,
+        subjectId:q.subjectId,
+        subjectCode:q.subjectCode,
+        subjectName:q.subjectName,
+        theme:q.theme||'',
+        q:q.q,
+        options:q.options,
+        active:true
+      }));
+  }
 
   if(bank.length<EXAM_COUNT){
     throw new Error(`วิชา ${selectedSubject.name} มีข้อสอบพร้อมใช้งาน ${bank.length} ข้อ ต้องมีอย่างน้อย ${EXAM_COUNT} ข้อ`);
@@ -173,6 +253,7 @@ async function unlockAndStart(s){
   try{
     questions=await fetchExam();
     registrationId=await registerAttempt();
+    await updateStudentCheckinForSubject();
   }catch(e){
     console.error(e);
     startingExam=false;
@@ -418,6 +499,17 @@ async function finish(status='submitted'){
       submittedAt:serverTimestamp()
     });
     $('doneRef').textContent=`เลขอ้างอิงการส่ง: ${ref.id}`;
+
+    if(checkinId){
+      try{
+        await setDoc(doc(db,'studentCheckins',checkinId),{
+          status: status==='terminated' ? 'terminated' : 'completed',
+          submissionId:ref.id,
+          completedAt:serverTimestamp(),
+          completedAtClient:new Date().toISOString()
+        },{merge:true});
+      }catch(e){console.warn('update checkin status failed',e)}
+    }
 
     if(wantsKey && status!=='terminated'){
       const revealAt=Date.now()+REVEAL_DELAY_MS;

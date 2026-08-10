@@ -26,6 +26,38 @@ service cloud.firestore {
     }
 
     // =====================================================
+    // STUDENT CHECK-INS
+    // บันทึกทันทีหลังนักศึกษากดลงทะเบียน ก่อนเลือกวิชา
+    // =====================================================
+    match /studentCheckins/{checkinId} {
+      function validCheckin() {
+        return request.resource.data.studentId is string
+          && request.resource.data.name is string
+          && request.resource.data.className is string
+          && request.resource.data.department is string
+          && request.resource.data.status is string;
+      }
+
+      allow create: if
+        (request.auth == null || isAdmin())
+        && validCheckin()
+        && request.resource.data.status == "registered";
+
+      // Student may only move the same check-in through exam states.
+      allow update: if
+        isAdmin()
+        || (
+          request.auth == null
+          && validCheckin()
+          && resource.data.studentId == request.resource.data.studentId
+          && resource.data.name == request.resource.data.name
+          && request.resource.data.status in ["registered", "exam_started", "completed", "terminated"]
+        );
+
+      allow read, delete: if isAdmin();
+    }
+
+    // =====================================================
     // REGISTRATIONS
     // =====================================================
     match /registrations/{registrationId} {
