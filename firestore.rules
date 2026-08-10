@@ -1,0 +1,112 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "otCHJNeKfgbohIs1lVn7O7RD5m73";
+    }
+
+    // =====================================================
+    // QUESTIONS
+    // Student: read only | Admin: full management
+    // =====================================================
+    match /questions/{questionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =====================================================
+    // ANSWER KEYS
+    // Admin only
+    // =====================================================
+    match /answerKeys/{questionId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    // =====================================================
+    // REGISTRATIONS
+    // =====================================================
+    match /registrations/{registrationId} {
+
+      function validRegistration() {
+        return request.resource.data.studentId is string
+          && request.resource.data.name is string
+          && request.resource.data.className is string
+          && request.resource.data.department is string
+          && request.resource.data.subjectId is string
+          && request.resource.data.subjectCode is string
+          && request.resource.data.subjectName is string
+          && request.resource.data.attemptToken is string
+          && request.resource.data.status == "started";
+      }
+
+      // First registration. Also allows Admin to test Student page in same browser.
+      allow create: if
+        (request.auth == null || isAdmin())
+        && validRegistration();
+
+      // setDoc() uses update if the deterministic registration document already exists.
+      // Admin may reset/test. Anonymous update is limited to same student + same subject.
+      allow update: if
+        isAdmin()
+        || (
+          request.auth == null
+          && validRegistration()
+          && resource.data.studentId == request.resource.data.studentId
+          && resource.data.subjectId == request.resource.data.subjectId
+        );
+
+      allow read, delete: if isAdmin();
+    }
+
+    // =====================================================
+    // SUBMISSIONS
+    // =====================================================
+    match /submissions/{submissionId} {
+      allow create: if
+        (request.auth == null || isAdmin())
+        && request.resource.data.registrationId is string
+        && request.resource.data.attemptToken is string
+        && request.resource.data.subjectId is string
+        && request.resource.data.subjectCode is string
+        && request.resource.data.subjectName is string
+        && request.resource.data.student.studentId is string
+        && request.resource.data.questionIds is list
+        && request.resource.data.selectedOriginal is list
+        && request.resource.data.questionIds.size() == 50
+        && request.resource.data.selectedOriginal.size() == 50
+        && exists(
+          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
+        )
+        && get(
+          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
+        ).data.attemptToken == request.resource.data.attemptToken
+        && get(
+          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
+        ).data.studentId == request.resource.data.student.studentId
+        && get(
+          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
+        ).data.subjectId == request.resource.data.subjectId;
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Optional future subject/settings collections
+    match /subjects/{subjectId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /examSettings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Everything else is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,13 +1,55 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin | วิทยาลัยเทคนิคนางรอง</title><link rel="stylesheet" href="styles.css"></head><body><main class="container">
-<section id="loginCard" class="card" style="max-width:520px;margin:40px auto"><div class="kicker">ADMINISTRATOR</div><h1>ผู้ดูแลระบบข้อสอบ</h1><p class="muted">วิทยาลัยเทคนิคนางรอง</p><div class="field"><label>Username</label><input id="adminUser" autocomplete="username"></div><div class="field" style="margin-top:12px"><label>Password</label><input id="adminPass" type="password" autocomplete="current-password"></div><div id="loginMsg" class="error hidden" style="margin-top:12px"></div><div class="row space" style="margin-top:16px"><a href="index.html">← กลับหน้าผู้เข้าสอบ</a><button id="loginBtn" class="btn">เข้าสู่ระบบ</button></div></section>
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin | วิทยาลัยเทคนิคนางรอง</title><link rel="stylesheet" href="styles.css"></head>
+<body><main class="container">
+<section id="loginCard" class="card login-card">
+  <div class="kicker">ADMINISTRATOR</div><h1>ผู้ดูแลระบบข้อสอบ</h1><p class="muted">วิทยาลัยเทคนิคนางรอง</p>
+  <div class="field"><label>Username</label><input id="adminUser" autocomplete="username"></div>
+  <div class="field topgap"><label>Password</label><input id="adminPass" type="password" autocomplete="current-password"></div>
+  <div id="loginMsg" class="error hidden topgap"></div>
+  <div class="row space topgap"><a href="index.html">← กลับหน้าผู้เข้าสอบ</a><button id="loginBtn" class="btn">เข้าสู่ระบบ</button></div>
+</section>
+
 <section id="adminApp" class="hidden">
-<div class="card header"><div class="brand"><div class="kicker">NANGRONG TECHNICAL COLLEGE</div><h1>แผงควบคุมข้อสอบออนไลน์</h1><p>ผู้จัดทำ: นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</p></div><div class="row"><a class="btn secondary small" href="index.html">หน้าผู้เข้าสอบ</a><button id="logoutBtn" class="btn danger small">ออกจากระบบ</button></div></div>
-<div class="grid four"><div class="metric"><div class="muted">ข้อสอบในคลัง</div><b id="mQuestions">0</b></div><div class="metric"><div class="muted">ลงทะเบียน</div><b id="mRegs">0</b></div><div class="metric"><div class="muted">ส่งข้อสอบ</div><b id="mSubs">0</b></div><div class="metric"><div class="muted">คะแนนเฉลี่ย /20</div><b id="mAvg">0.00</b></div></div>
-<div class="tabs"><button class="tab active" data-tab="results">ผลสอบ</button><button class="tab" data-tab="registrations">ผู้ลงทะเบียน</button><button class="tab" data-tab="questions">จัดการข้อสอบ</button><button class="tab" data-tab="backup">สำรองข้อมูล</button></div>
-<section id="tab-results" class="card"><div class="row space"><div><h2>ผลการสอบ</h2><div class="muted">คะแนนคำนวณเฉพาะในหน้า Admin: จำนวนข้อถูก × 20 ÷ 50</div></div><button id="clearResults" class="btn danger small">ลบผลสอบทั้งหมด</button></div><div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead><tbody id="resultRows"></tbody></table></div></section>
-<section id="tab-registrations" class="card hidden"><div class="row space"><h2>ข้อมูลผู้ลงทะเบียน</h2><button id="clearRegs" class="btn danger small">ลบข้อมูลทั้งหมด</button></div><div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>จัดการ</th></tr></thead><tbody id="regRows"></tbody></table></div></section>
-<section id="tab-questions" class="card hidden"><div class="row space"><div><h2>จัดการคลังข้อสอบ</h2><div class="muted">ระบบต้องมีอย่างน้อย 50 ข้อจึงจะเปิดสอบได้ หากมีมากกว่า 50 ข้อ ระบบจะสุ่มเลือก 50 ข้อต่อการสอบหนึ่งครั้ง</div></div><button id="resetQuestions" class="btn secondary small">คืนค่า 50 ข้อเริ่มต้น</button></div>
-<div class="grid two"><div class="field"><label>คำถาม</label><textarea id="qText"></textarea></div><div><div class="field"><label>ระดับ</label><select id="qLevel"><option value="basic">พื้นฐาน</option><option value="easy">ประยุกต์</option><option value="medium">วิเคราะห์</option></select></div><div class="field" style="margin-top:10px"><label>คำตอบที่ถูก</label><select id="qCorrect"><option value="0">ก</option><option value="1">ข</option><option value="2">ค</option><option value="3">ง</option></select></div></div></div>
-<div class="grid two" style="margin-top:12px"><div class="field"><label>ก.</label><textarea id="o0"></textarea></div><div class="field"><label>ข.</label><textarea id="o1"></textarea></div><div class="field"><label>ค.</label><textarea id="o2"></textarea></div><div class="field"><label>ง.</label><textarea id="o3"></textarea></div></div><div class="field" style="margin-top:12px"><label>คำอธิบาย / เหตุผล</label><textarea id="qExplain"></textarea></div><div id="qMsg" class="error hidden" style="margin-top:10px"></div><div class="row" style="margin-top:12px"><button id="saveQuestion" class="btn">เพิ่มข้อสอบ</button><button id="cancelEdit" class="btn secondary hidden">ยกเลิกแก้ไข</button></div><hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div id="questionList"></div></section>
-<section id="tab-backup" class="card hidden"><h2>สำรอง / ย้ายข้อมูล</h2><p class="muted">ข้อมูลทั้งหมดอ่านจาก Firebase Firestore กลาง สามารถส่งออก JSON จากหน้านี้เพื่อสำรองข้อมูลได้</p><div class="row"><button id="exportBtn" class="btn">ดาวน์โหลดข้อมูล JSON</button><label class="btn secondary" style="cursor:pointer">นำเข้า JSON<input id="importFile" type="file" accept="application/json" hidden></label></div><div class="notice" style="margin-top:16px">ระบบเวอร์ชันนี้เชื่อม Firebase Firestore แล้ว นักเรียนหลายเครื่องจะส่งข้อมูลเข้าสู่ฐานข้อมูลกลางเดียวกันเมื่อ firebase-config.js และ Firestore Rules ถูกตั้งค่าครบ</div></section>
-</section></main><script type="module" src="admin.js"></script></body></html>
+  <div class="card header"><div class="brand"><div class="kicker">NANGRONG TECHNICAL COLLEGE</div><h1>แผงควบคุมข้อสอบรวมทุกวิชา</h1><p>ผู้จัดทำ: นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</p></div><div class="row"><a class="btn secondary small" href="index.html">หน้าผู้เข้าสอบ</a><button id="logoutBtn" class="btn danger small">ออกจากระบบ</button></div></div>
+  <div class="grid four">
+    <div class="metric"><div class="muted">ข้อสอบในคลัง</div><b id="mQuestions">0</b></div>
+    <div class="metric"><div class="muted">รายวิชาพร้อมสอบ</div><b id="mSubjects">0</b></div>
+    <div class="metric"><div class="muted">ส่งข้อสอบ</div><b id="mSubs">0</b></div>
+    <div class="metric"><div class="muted">คะแนนเฉลี่ย /20</div><b id="mAvg">0.00</b></div>
+  </div>
+
+  <div class="tabs"><button class="tab active" data-tab="results">ผลสอบ</button><button class="tab" data-tab="registrations">ผู้ลงทะเบียน</button><button class="tab" data-tab="questions">จัดการข้อสอบ</button><button class="tab" data-tab="backup">สำรองข้อมูล</button></div>
+
+  <section id="tab-results" class="card">
+    <div class="row space"><div><h2>ผลการสอบ</h2><div class="muted">คะแนนคำนวณเฉพาะหน้า Admin: จำนวนข้อถูก × 20 ÷ 50</div></div><div class="row"><select id="resultSubjectFilter" class="filter-select"></select><button id="clearResults" class="btn danger small">ลบผลสอบทั้งหมด</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead><tbody id="resultRows"></tbody></table></div>
+  </section>
+
+  <section id="tab-registrations" class="card hidden">
+    <div class="row space"><h2>ข้อมูลผู้ลงทะเบียน</h2><div class="row"><select id="regSubjectFilter" class="filter-select"></select><button id="clearRegs" class="btn danger small">ลบข้อมูลทั้งหมด</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น</th><th>แผนก</th><th>จัดการ</th></tr></thead><tbody id="regRows"></tbody></table></div>
+  </section>
+
+  <section id="tab-questions" class="card hidden">
+    <div class="row space"><div><h2>จัดการคลังข้อสอบ</h2><div class="muted">แต่ละวิชาต้องมีอย่างน้อย 50 ข้อจึงจะเปิดสอบได้</div></div><button id="resetQuestions" class="btn secondary small">นำเข้าคลังข้อสอบ JSON</button></div>
+    <div class="row filter-row"><label class="muted">กรองรายการ:</label><select id="questionSubjectFilter" class="filter-select"></select></div>
+    <div class="grid two">
+      <div class="field"><label>รายวิชา</label><select id="qSubject"></select></div>
+      <div class="field"><label>คำตอบที่ถูก</label><select id="qCorrect"><option value="0">ก</option><option value="1">ข</option><option value="2">ค</option><option value="3">ง</option></select></div>
+    </div>
+    <div class="field topgap"><label>คำถาม</label><textarea id="qText"></textarea></div>
+    <div class="grid two topgap"><div class="field"><label>ก.</label><textarea id="o0"></textarea></div><div class="field"><label>ข.</label><textarea id="o1"></textarea></div><div class="field"><label>ค.</label><textarea id="o2"></textarea></div><div class="field"><label>ง.</label><textarea id="o3"></textarea></div></div>
+    <div class="field topgap"><label>คำอธิบาย / เหตุผล</label><textarea id="qExplain"></textarea></div>
+    <div id="qMsg" class="error hidden topgap"></div>
+    <div class="row topgap"><button id="saveQuestion" class="btn">เพิ่มข้อสอบ</button><button id="cancelEdit" class="btn secondary hidden">ยกเลิกแก้ไข</button></div>
+    <hr><div id="questionList"></div>
+  </section>
+
+  <section id="tab-backup" class="card hidden">
+    <h2>สำรอง / ย้ายข้อมูล</h2><p class="muted">ข้อมูลทั้งหมดอ่านจาก Firebase Firestore กลาง</p>
+    <div class="row"><button id="exportBtn" class="btn">ดาวน์โหลดข้อมูล JSON</button><label class="btn secondary file-label">นำเข้า JSON<input id="importFile" type="file" accept="application/json" hidden></label></div>
+    <div class="notice topgap">รหัสเข้าห้องสอบของทุกวิชาเป็น <b>A2000</b></div>
+  </section>
+</section>
+</main><script type="module" src="admin.js"></script></body></html>

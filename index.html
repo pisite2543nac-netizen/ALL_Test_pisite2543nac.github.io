@@ -1,43 +1,99 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ระบบสอบออนไลน์ | วิทยาลัยเทคนิคนางรอง</title><link rel="stylesheet" href="styles.css"></head><body>
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ระบบสอบออนไลน์ | วิทยาลัยเทคนิคนางรอง</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
 <div id="watermark" class="watermark hidden"></div>
-<main class="container narrow">
-  <section id="screen-register" class="card">
-    <div class="header"><div class="brand"><div class="kicker">NANGRONG TECHNICAL COLLEGE</div><h1>ระบบสอบออนไลน์ วิทยาลัยเทคนิคนางรอง</h1><p>วิชา เทคโนโลยีการนำเข้าข้อมูลเข้าสู่ระบบคอมพิวเตอร์</p></div><a class="btn secondary small" href="admin.html">Admin</a></div>
-    <div style="margin:14px 0"><span class="pill">ปรนัย 4 ตัวเลือก</span><span class="pill">50 ข้อ</span><span class="pill">คะแนนเต็ม 20 คะแนน</span><span class="pill">เวลา 75 นาที</span></div>
-    <h2>คำชี้แจงการสอบ</h2>
-    <ol class="rules">
-      <li>ข้อสอบเป็นข้อสอบชุดเดียวกันจากคลังกลาง จำนวน <b>50 ข้อ</b> แต่ระบบจะสุ่มลำดับข้อและสุ่มตำแหน่งตัวเลือก ก–ง ใหม่สำหรับผู้เข้าสอบแต่ละคน เพื่อลดการลอกคำตอบจากผู้ที่นั่งข้างกัน</li>
-      <li>คะแนนดิบเต็ม 50 ข้อจะถูกแปลงเป็นคะแนนเต็ม <b>20 คะแนน</b> โดยคิดข้อละ 0.4 คะแนน ระบบจะไม่แสดงคะแนนหรือเฉลยแก่ผู้เข้าสอบหลังส่งข้อสอบ ผู้ที่ดูผลคะแนนได้คือผู้ดูแลระบบเท่านั้น</li>
-      <li>ก่อนเข้าสอบต้องลงทะเบียนให้ครบถ้วน ได้แก่ <b>ชื่อ-นามสกุล ชั้น/กลุ่มเรียน แผนกวิชา และเลขประจำตัวนักศึกษา</b> ข้อมูลจะใช้ระบุตัวผู้เข้าสอบและบันทึกผลการทำข้อสอบ</li>
-      <li>มีเวลาทำข้อสอบ <b>1 ชั่วโมง 15 นาที</b> เมื่อหมดเวลา ระบบจะส่งคำตอบที่มีอยู่โดยอัตโนมัติ แม้ยังตอบไม่ครบทุกข้อ</li>
-      <li>กรณีส่งด้วยตนเอง ผู้เข้าสอบต้องตอบให้ครบทุกข้อก่อน ปุ่มส่งข้อสอบจึงจะเปิดใช้งาน กรุณาตรวจทานหมายเลขข้อที่ยังไม่เปลี่ยนสถานะก่อนส่ง</li>
-      <li>เมื่อเริ่มสอบ ระบบจะขอเข้าสู่โหมดเต็มจอ และปิดการคัดลอก วาง คลิกขวา และการพิมพ์หน้าเว็บ ระหว่างสอบไม่ควรสลับแท็บ สลับหน้าต่าง หรือออกจากโหมดเต็มจอ</li>
-      <li>ระบบนับพฤติกรรมต้องสงสัย เช่น สลับแท็บ ออกจากเต็มจอ หรือพยายามคัดลอก หากเกิน <b>3 ครั้ง</b> ระบบจะยุติการสอบและบันทึกสถานะไว้</li>
-      <li>ตัวเลือกคำตอบถูกจัดให้อยู่ในกล่องขนาดเท่ากัน และใช้รูปแบบข้อความใกล้เคียงกันเพื่อลดการเดาคำตอบจากความยาวหรือรูปแบบของตัวเลือก ผู้เข้าสอบควรพิจารณาเนื้อหาของแต่ละตัวเลือกเป็นหลัก</li>
-      <li>การส่งข้อสอบถือเป็นการยืนยันคำตอบครั้งสุดท้าย หลังส่งแล้วไม่สามารถย้อนกลับมาแก้ไขคำตอบในรอบนั้นได้</li>
-      <li>ผู้เข้าสอบควรทำข้อสอบด้วยตนเอง ห้ามเปิดเครื่องมือช่วยตอบ โปรแกรมค้นหา AI เอกสารประกอบ หรือขอคำตอบจากผู้อื่นระหว่างทำข้อสอบ</li>
-    </ol>
-    <div class="notice">ผู้จัดทำ: <b>นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</b></div>
-    <h2>ลงทะเบียนเพื่อเข้าสอบ</h2>
-    <div class="grid two">
-      <div class="field"><label>ชื่อ-นามสกุล</label><input id="name" autocomplete="name" placeholder="เช่น นายสมชาย ใจดี"></div>
-      <div class="field"><label>เลขประจำตัวนักศึกษา</label><input id="studentId" inputmode="numeric" placeholder="กรอกเลขนักศึกษา"></div>
-      <div class="field"><label>ชั้น / กลุ่มเรียน</label><input id="className" placeholder="เช่น ปวช.2/1"></div>
-      <div class="field"><label>แผนกวิชา</label><input id="department" placeholder="เช่น เทคโนโลยีสารสนเทศ"></div>
-    </div>
-    <label class="row" style="margin-top:14px"><input type="checkbox" id="accept"> <span>ข้าพเจ้าได้อ่านและยอมรับคำชี้แจงการสอบแล้ว</span></label>
-    <div id="registerMsg" class="error hidden" style="margin-top:12px"></div>
-    <div class="row space" style="margin-top:18px"><span class="muted">กรอกข้อมูลให้ครบก่อนเริ่มสอบ</span><button class="btn" id="startBtn">ลงทะเบียนและเริ่มสอบ</button></div>
-  </section>
+<main class="container">
 
-  <section id="screen-exam" class="hidden">
-    <div class="exam-layout">
-      <aside class="card side"><b>ข้อสอบ 50 ข้อ</b><div id="answered" class="muted">ตอบแล้ว 0/50</div><div id="timer" class="timer">01:15:00</div><div id="nav" class="nav-grid"></div><div class="muted" style="margin-top:12px">พฤติกรรมต้องสงสัย <span id="violations">0</span>/3</div><button id="submitBtn" class="btn ok" style="width:100%;margin-top:12px" disabled>ส่งข้อสอบ</button></aside>
-      <section class="card"><div class="progress"><div id="progress"></div></div><div id="qLabel" class="muted"></div><div id="qText" class="question"></div><div id="options" class="options"></div><div class="row space" style="margin-top:18px"><button id="prevBtn" class="btn secondary">ก่อนหน้า</button><button id="nextBtn" class="btn secondary">ถัดไป</button></div></section>
+<section id="screen-subject" class="card">
+  <div class="header">
+    <div class="brand">
+      <div class="kicker">NANGRONG TECHNICAL COLLEGE</div>
+      <h1>ระบบสอบออนไลน์ วิทยาลัยเทคนิคนางรอง</h1>
+      <p>เลือกวิชา กรอกรหัสเข้าห้องสอบเพื่อปลดล็อก แล้วจึงลงทะเบียนเข้าสอบ</p>
     </div>
-  </section>
+    <a class="btn secondary small" href="admin.html">Admin</a>
+  </div>
+  <div class="notice">ผู้จัดทำ: <b>นายพิสิษฐ์ หุนตระนี ครูพิเศษสอน</b></div>
+  <div id="subjectGrid" class="subject-grid"></div>
+</section>
 
-  <section id="screen-done" class="card hidden score-hidden"><div class="kicker">ส่งข้อสอบเรียบร้อยแล้ว</div><h1>ระบบได้รับคำตอบของคุณแล้ว</h1><p>เพื่อความเป็นธรรม ระบบจะไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ กรุณาติดต่อครูผู้สอนหากมีข้อสงสัยเกี่ยวกับผลการสอบ</p><div id="doneRef" class="muted"></div></section>
+<section id="screen-register" class="card hidden">
+  <div class="header">
+    <div class="brand">
+      <div id="subjectTag" class="kicker"></div>
+      <h1 id="subjectTitle"></h1>
+      <p id="subjectCodeText"></p>
+    </div>
+    <button id="backSubjectBtn" class="btn secondary small">← เลือกวิชาใหม่</button>
+  </div>
+  <div class="pill-row">
+    <span class="pill">ปรนัย 4 ตัวเลือก</span><span class="pill">50 ข้อ</span>
+    <span class="pill">คะแนนเต็ม 20 คะแนน</span><span class="pill">เวลา 75 นาที</span>
+  </div>
+
+  <h2>คำชี้แจงการสอบ</h2>
+  <ol class="rules">
+    <li>แต่ละรายวิชามีข้อสอบ 50 ข้อ ระบบสุ่มลำดับข้อและตำแหน่งตัวเลือก ก–ง สำหรับผู้เข้าสอบแต่ละคน</li>
+    <li>คะแนนเต็ม 20 คะแนน ระบบไม่แสดงคะแนนหรือเฉลยในหน้า User และผู้เห็นคะแนนมีเพียง Admin</li>
+    <li>ก่อนเข้าสอบต้องปลดล็อกรายวิชาด้วยรหัสเข้าห้องสอบ จากนั้นกรอกชื่อ-นามสกุล ชั้น/กลุ่มเรียน แผนกวิชา และเลขนักศึกษาให้ครบ</li>
+    <li>มีเวลาทำข้อสอบ 1 ชั่วโมง 15 นาที เมื่อหมดเวลาระบบจะส่งคำตอบที่มีอยู่โดยอัตโนมัติ</li>
+    <li>การส่งด้วยตนเองต้องตอบครบทุกข้อก่อน ปุ่มส่งข้อสอบจึงจะเปิดใช้งาน</li>
+    <li>ระบบขอใช้งานโหมดเต็มจอและป้องกันการคัดลอก วาง คลิกขวา และคำสั่งบางชนิดระหว่างสอบ</li>
+    <li>ระบบนับการสลับแท็บ ออกจากเต็มจอ หรือพยายามคัดลอก หากเกิน 3 ครั้ง ระบบจะยุติการสอบ</li>
+    <li>ตัวเลือกทุกข้อจัดกล่องให้มีความสูงเท่ากัน และออกแบบความยาวข้อความให้ใกล้เคียงกันเพื่อลดการเดาคำตอบ</li>
+    <li>เมื่อส่งข้อสอบแล้วจะไม่สามารถย้อนกลับมาแก้ไขคำตอบของรอบนั้นได้</li>
+    <li>ให้ทำข้อสอบด้วยตนเอง ห้ามใช้ AI โปรแกรมค้นหา เอกสารประกอบ หรือขอคำตอบจากผู้อื่นระหว่างสอบ</li>
+  </ol>
+
+  <h2>ลงทะเบียนเพื่อเข้าสอบ</h2>
+  <div class="grid two">
+    <div class="field"><label>เลขประจำตัวนักศึกษา</label><input id="studentId" inputmode="numeric" placeholder="กรอกเลขนักศึกษา"></div>
+    <div class="field"><label>ชื่อ-นามสกุล</label><input id="name" autocomplete="name" placeholder="เช่น นายสมชาย ใจดี"></div>
+    <div class="field"><label>ชั้น / กลุ่มเรียน</label><input id="className" placeholder="เช่น ปวช.2/1"></div>
+    <div class="field"><label>แผนกวิชา</label><input id="department" placeholder="เช่น คอมพิวเตอร์"></div>
+  </div>
+  <label class="row accept"><input type="checkbox" id="accept"><span>ข้าพเจ้าได้อ่านและยอมรับคำชี้แจงการสอบแล้ว</span></label>
+  <div id="registerMsg" class="error hidden"></div>
+  <div class="row space"><span class="muted">ตรวจชื่อวิชาและข้อมูลก่อนเริ่มสอบ</span><button class="btn" id="startBtn">ลงทะเบียนและเริ่มสอบ</button></div>
+</section>
+
+<section id="screen-exam" class="hidden">
+  <div class="exam-layout">
+    <aside class="card side">
+      <div id="examSubjectMini" class="kicker"></div>
+      <b>ข้อสอบ 50 ข้อ</b>
+      <div id="answered" class="muted">ตอบแล้ว 0/50</div>
+      <div id="timer" class="timer">01:15:00</div>
+      <div id="nav" class="nav-grid"></div>
+      <div class="muted counter">พฤติกรรมต้องสงสัย <span id="violations">0</span>/3</div>
+      <button id="submitBtn" class="btn ok full" disabled>ส่งข้อสอบ</button>
+    </aside>
+    <section class="card">
+      <div class="progress"><div id="progress"></div></div>
+      <div id="qLabel" class="muted"></div>
+      <div id="qText" class="question"></div>
+      <div id="options" class="options"></div>
+      <div class="row space controls"><button id="prevBtn" class="btn secondary">ก่อนหน้า</button><button id="nextBtn" class="btn secondary">ถัดไป</button></div>
+    </section>
+  </div>
+</section>
+
+<section id="screen-done" class="card hidden score-hidden">
+  <div class="kicker">ส่งข้อสอบเรียบร้อยแล้ว</div>
+  <h1>ระบบได้รับคำตอบของคุณแล้ว</h1>
+  <p id="doneSubject"></p>
+  <p>ระบบจะไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ กรุณาติดต่อครูผู้สอนหากมีข้อสงสัยเกี่ยวกับผลการสอบ</p>
+  <div id="doneRef" class="muted"></div>
+</section>
+
 </main>
 <div id="lockOverlay" class="overlay hidden"><div class="box"><h2>ยุติการสอบ</h2><p>ระบบตรวจพบพฤติกรรมต้องสงสัยเกินจำนวนที่กำหนด การสอบรอบนี้ถูกยุติและบันทึกสถานะแล้ว</p><button class="btn" onclick="location.reload()">กลับหน้าหลัก</button></div></div>
-<script type="module" src="student.js"></script></body></html>
+<script type="module" src="student.js"></script>
+</body>
+</html>
