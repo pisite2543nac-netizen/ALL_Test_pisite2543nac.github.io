@@ -1,5 +1,6 @@
 // Firebase Web App configuration — Nangrong Exam Web
 // Security is controlled by Firebase Authentication + Firestore Security Rules.
+
 export const firebaseConfig = {
   apiKey: "AIzaSyDS6053SYD8nAqYN3lu9YVT1UbKobIRx00",
   authDomain: "nangrong-exam-web.firebaseapp.com",
