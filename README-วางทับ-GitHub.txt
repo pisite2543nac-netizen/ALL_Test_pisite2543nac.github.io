@@ -1,57 +1,30 @@
-ระบบข้อสอบออนไลน์ วิทยาลัยเทคนิคนางรอง — ชุดวางทับ GitHub
+NANGRONG EXAM — REGISTER -> SUBJECT CODE -> EXAM
 
-วิธีใช้งาน
-1) แตก ZIP นี้
-2) เข้า GitHub Repository: ALL_Test_pisite2543nac.github.io
-3) อัปโหลดไฟล์ทั้งหมดใน ZIP ไปที่ root ของ branch main และเลือก Replace/Commit files
-4) รอ Actions > pages build and deployment ขึ้น Success
-5) กด Ctrl+F5 ที่หน้าเว็บ
+ลำดับการใช้งาน
+1) นักศึกษาลงทะเบียนก่อน: เลขนักศึกษา / ชื่อ-นามสกุล / ชั้น-กลุ่ม / แผนก
+2) ระบบแสดง 11 รายวิชา
+3) แต่ละรายวิชามีช่องกรอก Code ของตัวเอง
+4) Code ปัจจุบันของทุกวิชา = A2000
+5) Code ถูกต้อง -> ระบบบันทึก registration ของวิชานั้นใน Firestore -> โหลดข้อสอบ -> เริ่มสอบ
+6) ส่งข้อสอบ -> บันทึก submissions -> หน้า User ไม่แสดงคะแนน
+7) Admin เป็นผู้ดูคะแนนและข้อมูลทั้งหมด
 
-สำคัญ: Firestore Rules ไม่ทำงานจาก GitHub
-- เปิด Firebase Console > Firestore Database > Rules
-- ลบ Rules เดิมทั้งหมด
-- คัดลอกเนื้อหาไฟล์ firestore.rules ชุดนี้ไปวาง
-- กด Publish
+ไฟล์ข้อสอบพร้อมนำเข้า:
+initial-question-bank-all-subjects.json
 
-ข้อสอบ
-- 11 รายวิชา
-- วิชาละ 50 ข้อ รวม 550 ข้อ
-- คะแนนเต็ม 20
-- ห้องสอบทุกวิชา: A2000
-- สุ่มลำดับข้อสอบและตัวเลือก
-- นักเรียนไม่เห็นคะแนน
-- Admin เท่านั้นที่เห็นคะแนน
+จำนวนข้อสอบ:
+11 วิชา x 50 ข้อ = 550 ข้อ
+ต่อวิชา: ง่าย 15 + พื้นฐาน 10 + ยาก 25
+ระดับความยากไม่แสดงในหน้าผู้เข้าสอบ
 
-นำเข้าคลังข้อสอบ
-- Login admin.html
-- ไปเมนู จัดการข้อสอบ
-- กด นำเข้าคลังข้อสอบ JSON
+การติดตั้ง:
+- แตก ZIP แล้วอัปโหลดไฟล์ทั้งหมดวางทับ root ของ GitHub Repository
+- รอ GitHub Pages deploy สำเร็จ
+- นำ firestore.rules ไปวางใน Firebase > Firestore Database > Rules > Publish
+- Login Admin
+- แท็บจัดการข้อสอบ > นำเข้าคลังข้อสอบ JSON
 - เลือก initial-question-bank-all-subjects.json
-- หลังนำเข้าสำเร็จควรแสดง 550 ข้อ และ 11 วิชาพร้อมสอบ
+- หลังนำเข้าสำเร็จหน้า Admin ควรแสดง 550 ข้อ และ 11 วิชาพร้อมสอบ
 
-Admin
-Username: nkseza2000
-Firebase Auth Email: nkseza2000@nangrong-exam.invalid
-Admin UID: otCHJNeKfgbohIs1lVn7O7RD5m73
-Password: ใช้รหัสที่ตั้งไว้ใน Firebase Authentication
-
-หมายเหตุ
-- data.js เป็นไฟล์ compatibility เท่านั้น ระบบใหม่ไม่ได้ใช้
-- หาก Firebase API key ใน Project ถูกเปลี่ยนภายหลัง ให้แก้เฉพาะ firebase-config.js
-
-
-อัปเดตหน้ารหัสเข้าสอบ:
-- หน้าแรกแสดงช่องกรอกรหัสในแต่ละการ์ดรายวิชา
-- รหัสทุกวิชา: A2000
-- ใส่ถูกแล้วจึงปรากฏปุ่มเข้าสู่หน้าลงทะเบียน
-- การลงทะเบียนนักศึกษาและการบันทึก Firestore ยังคงเดิม
-
-
-อัปเดตหน้า CODE:
-- หน้าแรกเป็นหน้ากรอก Code ก่อนเห็นรายวิชา
-- Code ทุกวิชา: A2000
-- เมื่อ Code ถูกต้อง ระบบจะแสดงรายวิชา 11 วิชา
-- เลือกวิชาแล้วจึงเข้าสู่หน้าลงทะเบียนนักศึกษา
-- การลงทะเบียน/Firestore/Admin/ผลสอบยังใช้ระบบเดิมทั้งหมด
-- คลังข้อสอบรวมอยู่ในไฟล์ initial-question-bank-all-subjects.json จำนวน 550 ข้อ
-  วิชาละ 50 ข้อ: ง่าย 15, พื้นฐาน 10, ยาก 25
+Firebase config ในชุดนี้ใช้ API key ตัวล่าสุดที่คัดลอกจาก Firebase Console:
+AIzaSyDS6O53SYD8nAqYN3lu9YVT1UbKobIRx00

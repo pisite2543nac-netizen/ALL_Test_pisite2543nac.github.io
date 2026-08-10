@@ -1,0 +1,134 @@
+{
+  "totalSubjects": 11,
+  "questionsPerSubject": 50,
+  "totalQuestions": 550,
+  "difficultyPerSubject": {
+    "easy": 15,
+    "basic": 10,
+    "hard": 25
+  },
+  "roomCode": "A2000",
+  "subjects": [
+    {
+      "id": "safety",
+      "code": "20001-1001",
+      "name": "สุขภาพความปลอดภัยและสิ่งแวดล้อม",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "labor-law",
+      "code": "20001-1004",
+      "name": "กฎหมายแรงงาน",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "network",
+      "code": "21900-1005",
+      "name": "เครือข่ายคอมพิวเตอร์",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "ui",
+      "code": "21901-2008",
+      "name": "การออกแบบส่วนติดต่อผู้ใช้",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "data-input",
+      "code": "21901-2017",
+      "name": "เทคโนโลยีการนำเข้าข้อมูลเข้าสู่ระบบคอมพิวเตอร์",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "it-service",
+      "code": "21901-2020",
+      "name": "ปฏิบัติงานบริการคอมพิวเตอร์และเทคโนโลยีสารสนเทศ",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "programming-language",
+      "code": "21910-2010",
+      "name": "การเขียนโปรแกรมภาษาคอมพิวเตอร์",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "advanced-ui",
+      "code": "31901-2001",
+      "name": "การออกแบบส่วนติดต่อผู้ใช้ขั้นสูง",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "frontend",
+      "code": "31901-2004",
+      "name": "การพัฒนาซอฟต์แวร์ด้วยเทคโนโลยี Front-End",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "mobile",
+      "code": "31901-2009",
+      "name": "การพัฒนาซอฟต์แวร์สำหรับอุปกรณ์เคลื่อนที่",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    },
+    {
+      "id": "computer-programming",
+      "code": "31910-0004",
+      "name": "การเขียนโปรแกรมคอมพิวเตอร์",
+      "questionCount": 50,
+      "difficulty": {
+        "basic": 10,
+        "easy": 15,
+        "hard": 25
+      }
+    }
+  ]
+}

@@ -201,3 +201,87 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   margin-top:auto;
   font-weight:800;
 }
+
+
+/* =========================================================
+   REGISTER FIRST -> SUBJECT CODE -> EXAM
+   ========================================================= */
+.student-preview{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 16px;
+  align-items:center;
+  padding:14px 16px;
+  margin:16px 0;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(6,25,40,.65);
+  color:var(--muted);
+}
+.student-preview b{color:#fff}
+.subject-card{
+  display:flex;
+  flex-direction:column;
+  min-height:245px;
+}
+.subject-code-gate{
+  margin-top:auto;
+  padding-top:15px;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.subject-code-gate label{
+  display:block;
+  margin-bottom:7px;
+  font-size:.82rem;
+  font-weight:800;
+  color:#d8eaf6;
+}
+.subject-code-row{
+  display:flex;
+  gap:8px;
+  align-items:stretch;
+}
+.subject-code-row input{
+  min-width:0;
+  flex:1;
+  border:1px solid #315976;
+  background:#071a2a;
+  color:#fff;
+  border-radius:10px;
+  padding:10px 11px;
+  font:inherit;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  outline:none;
+  -webkit-user-select:text;
+  user-select:text;
+}
+.subject-code-row input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(39,195,255,.12);
+}
+.subject-code-row .btn{
+  white-space:nowrap;
+  padding-inline:12px;
+}
+.subject-code-msg{
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:9px;
+  font-size:.78rem;
+  font-weight:800;
+}
+.subject-code-msg.bad{
+  background:#431a25;
+  border:1px solid #7a3143;
+  color:#ffdbe3;
+}
+.subject-code-msg.ok{
+  background:#123a27;
+  border:1px solid #2f7550;
+  color:#d8ffe5;
+}
+@media(max-width:560px){
+  .subject-code-row{flex-direction:column}
+  .subject-code-row .btn{width:100%}
+}

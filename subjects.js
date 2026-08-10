@@ -1,3 +1,4 @@
+// Code ปัจจุบันของทุกวิชา (แต่กรอกแยกในแต่ละการ์ดรายวิชา)
 export const EXAM_ROOM_CODE = "A2000";
 export const SUBJECTS = [
   {
