@@ -154,6 +154,20 @@
 
   <div id="studentSummary" class="student-preview"></div>
 
+  <div id="studentRequestCenter" class="student-request-center">
+    <div class="row space">
+      <div>
+        <div class="kicker">REQUEST CENTER</div>
+        <h3>คำร้องและผลการอนุมัติ</h3>
+      </div>
+      <button id="refreshRequestsBtn" class="btn secondary small" type="button">รีเฟรชคำร้อง</button>
+    </div>
+    <div id="studentRequestList" class="request-list">
+      <div class="muted">ยังไม่มีคำร้อง</div>
+    </div>
+  </div>
+
+
   <div id="pendingRevealShortcut" class="pending-reveal-shortcut hidden">
     <div>
       <b>มีเฉลยจากการสอบก่อนหน้าที่กำลังรอเปิด</b>
@@ -210,12 +224,21 @@
     </div>
   </div>
 
+  <div class="exam-attempt-banner">
+    <div class="attempt-banner-icon">🚨</div>
+    <div>
+      <strong>สำคัญมาก: แต่ละ User มีสิทธิ์สอบรายวิชาละ 2 ครั้งเท่านั้น</strong>
+      <p>เมื่อกด “เริ่มทำข้อสอบ” จะนับเป็นการใช้สิทธิ์ 1 ครั้งทันที และถ้าการสอบถูกยุติจากการทำผิดกติกา รอบนั้นจะถูกนับเป็น 1 ครั้งเช่นกัน เมื่อใช้ครบ 2 ครั้ง ระบบจะยุติสิทธิ์สอบรายวิชานั้นทันที และต้องติดต่อ Admin เพื่อขอปลดล็อกสิทธิ์สอบใหม่</p>
+    </div>
+  </div>
+
   <div class="instruction-rules">
     <h3>ข้อปฏิบัติระหว่างสอบ</h3>
     <ol>
       <li>ทำข้อสอบด้วยตนเอง และไม่เปิดเว็บไซต์หรือโปรแกรมอื่นระหว่างสอบ</li>
       <li>ห้ามเปลี่ยน Tab / Window, ออกจาก Fullscreen, Copy, Cut, Paste หรือคลิกขวาระหว่างสอบ</li>
-      <li>ระบบจะบันทึกพฤติกรรมต้องสงสัย หากเกิน 3 ครั้ง ระบบสามารถยุติการสอบได้</li>
+      <li><strong>ระบบจะบันทึกพฤติกรรมต้องสงสัย</strong> หากเกิน 2 ครั้ง ระบบจะยุติการสอบทันที และรอบที่ถูกยุติจะนับเป็นสิทธิ์สอบ 1 ครั้ง</li>
+      <li><strong>ต้องอยู่ใน Fullscreen ตลอดเวลาสอบ</strong> ห้ามพับ/ย่อหน้าต่าง, สลับโปรแกรม, เปิด View Source หรือ Developer Tools ระหว่างสอบ การออกจาก Fullscreen หรือหน้าเว็บจะถูกบันทึกเป็นพฤติกรรมต้องสงสัย</li>
       <li>ห้าม Refresh หรือปิดหน้าเว็บระหว่างทำข้อสอบ เพราะอาจทำให้การสอบสะดุดหรือข้อมูลคำตอบสูญหาย</li>
       <li>หากหมดเวลา ระบบสามารถส่งคำตอบที่มีอยู่โดยอัตโนมัติ</li>
       <li>คะแนนสอบจะไม่แสดงในหน้าของนักศึกษา คะแนนจะแสดงในหน้า Admin เท่านั้น</li>
@@ -245,8 +268,9 @@
       <div id="answered" class="muted">ตอบแล้ว 0/50</div>
       <div id="timer" class="timer">01:15:00</div>
       <div id="nav" class="nav-grid"></div>
-      <div class="muted counter">พฤติกรรมต้องสงสัย <span id="violations">0</span>/3</div>
+      <div class="muted counter">พฤติกรรมต้องสงสัย <span id="violations">0</span>/2 <small>(ครั้งที่ 3 ยุติสอบ)</small></div>
       <button id="submitBtn" class="btn ok full" disabled>ส่งข้อสอบ</button>
+      <button id="forfeitBtn" class="btn danger full topgap" type="button">สละสิทธิ์สอบกลางคัน</button>
     </aside>
     <section class="card">
       <div class="progress"><div id="progress"></div></div>
@@ -264,6 +288,19 @@
   <p id="doneSubject"></p>
   <p id="doneKeyText">ระบบจะไม่แสดงคะแนนในหน้าผู้เข้าสอบ</p>
   <div id="doneRef" class="muted"></div>
+
+  <div id="postExamRequests" class="post-exam-requests">
+    <div class="request-warning">
+      <b>📩 คำร้องหลังสอบ</b>
+      <span>คะแนนจะไม่แสดงจนกว่า Admin จะอนุมัติเป็นรายบุคคล หากต้องการสอบแก้ ให้ส่งคำร้องและ Admin จะตรวจผลสอบก่อนอนุมัติ</span>
+    </div>
+    <div class="row request-action-row">
+      <button id="requestScoreBtn" class="btn secondary" type="button">ขออนุมัติดูคะแนนสอบ</button>
+      <button id="requestRetakeBtn" class="btn" type="button">ยื่นคำร้องขอสอบแก้</button>
+    </div>
+    <div id="requestActionMsg" class="muted"></div>
+  </div>
+
 
   <div id="revealWaiting" class="reveal-wait hidden">
     <div class="reveal-label">เฉลยพร้อมเหตุผลจะเปิดในอีก</div>
@@ -293,7 +330,17 @@
 </section>
 
 </main>
-<div id="lockOverlay" class="overlay hidden"><div class="box"><h2>ยุติการสอบ</h2><p>ระบบตรวจพบพฤติกรรมต้องสงสัยเกินจำนวนที่กำหนด การสอบรอบนี้ถูกยุติและบันทึกสถานะแล้ว</p><button class="btn" onclick="location.reload()">กลับหน้าหลัก</button></div></div>
+
+<div id="fullscreenGuardOverlay" class="overlay hidden fullscreen-guard">
+  <div class="box">
+    <div class="guard-icon">⚠️</div>
+    <h2>ต้องอยู่ใน Fullscreen ตลอดเวลาสอบ</h2>
+    <p>ระบบตรวจพบว่าหน้าสอบหลุดจาก Fullscreen หรือหน้าต่างสอบไม่ได้อยู่ด้านหน้า เหตุการณ์นี้ถูกบันทึกเป็นพฤติกรรมต้องสงสัยแล้ว</p>
+    <p><b>กรุณากลับเข้าสู่ Fullscreen ก่อนทำข้อสอบต่อ</b></p>
+    <button id="returnFullscreenBtn" class="btn ok" type="button">กลับเข้าสู่ Fullscreen</button>
+  </div>
+</div>
+<div id="lockOverlay" class="overlay hidden"><div class="box"><h2>⛔ ยุติการสอบทันที</h2><p>ระบบตรวจพบพฤติกรรมต้องสงสัยเกิน 2 ครั้ง การสอบรอบนี้ถูกยุติและนับเป็นสิทธิ์สอบ 1 ครั้ง</p><p><b>หากหมดสิทธิ์สอบ กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่</b></p><button class="btn" onclick="location.reload()">กลับหน้าหลัก</button></div></div>
 <script type="module" src="student.js"></script>
 </body>
 </html>

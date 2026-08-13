@@ -91,6 +91,63 @@ service cloud.firestore {
     }
 
     // =====================================================
+    // EXAM ATTEMPT LIMIT
+    // 1 User x 1 Subject = maximum 2 attempts
+    // =====================================================
+    match /examAttempts/{attemptId} {
+      function ownsAttempt() {
+        return signedIn()
+          && resource.data.ownerUid == request.auth.uid;
+      }
+
+      function createsOwnAttempt() {
+        return signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.studentId is string
+          && request.resource.data.subjectId is string
+          && request.resource.data.attemptsUsed == 1
+          && request.resource.data.terminatedCount == 0
+          && request.resource.data.maxAttempts == 2;
+      }
+
+      // Student can create first attempt only.
+      allow create: if isAdmin() || createsOwnAttempt();
+
+      // Student can only:
+      // A) increment attemptsUsed exactly +1 up to 2
+      // B) increment terminatedCount exactly +1, never above attemptsUsed
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.studentId == resource.data.studentId
+        && request.resource.data.subjectId == resource.data.subjectId
+        && request.resource.data.maxAttempts == 2
+        && (
+          (
+            request.resource.data.attemptsUsed == resource.data.attemptsUsed + 1
+            && request.resource.data.attemptsUsed <= 2
+            && request.resource.data.terminatedCount == resource.data.terminatedCount
+          )
+          ||
+          (
+            request.resource.data.attemptsUsed == resource.data.attemptsUsed
+            && request.resource.data.terminatedCount == resource.data.terminatedCount + 1
+            && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed
+          )
+        )
+      );
+
+      allow read: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // =====================================================
     // EXAM REGISTRATIONS
     // =====================================================
     match /registrations/{registrationId} {
@@ -172,6 +229,40 @@ service cloud.firestore {
         ).data.subjectId == request.resource.data.subjectId;
 
       allow read, update, delete: if isAdmin();
+    }
+
+    // =====================================================
+    // STUDENT REQUESTS
+    // score_view = ขออนุมัติดูคะแนนรายบุคคล
+    // retake     = ขอสอบแก้
+    // =====================================================
+    match /examRequests/{requestId} {
+      function validStudentRequest() {
+        return signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.studentId is string
+          && request.resource.data.studentName is string
+          && request.resource.data.subjectId is string
+          && request.resource.data.subjectCode is string
+          && request.resource.data.submissionId is string
+          && (
+            request.resource.data.requestType == "score_view"
+            || request.resource.data.requestType == "retake"
+          )
+          && request.resource.data.status == "pending";
+      }
+
+      allow create: if validStudentRequest();
+
+      // นักศึกษาเห็นเฉพาะคำร้องของตัวเอง รวมผลอนุมัติคะแนนของตัวเอง
+      allow read: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+        );
+
+      // เฉพาะ Admin เปลี่ยน pending -> approved/rejected และใส่คะแนนที่อนุมัติ
+      allow update, delete: if isAdmin();
     }
 
     match /subjects/{subjectId} {

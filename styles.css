@@ -659,3 +659,193 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   .instruction-actions{align-items:stretch}
   .instruction-actions .btn{width:100%}
 }
+
+
+/* =========================================================
+   MAX 2 ATTEMPTS / STRONG WARNINGS
+   ========================================================= */
+.attempt-status{
+  margin:14px 0 4px;
+  padding:12px 14px;
+  border-radius:13px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  border:1px solid rgba(255,255,255,.12);
+}
+.attempt-status.available{
+  background:rgba(245,158,11,.12);
+  border-color:rgba(245,158,11,.55);
+}
+.attempt-status.available b{
+  color:#ffd166;
+}
+.attempt-status.locked{
+  background:rgba(220,38,38,.18);
+  border-color:rgba(248,113,113,.75);
+  box-shadow:0 0 0 1px rgba(248,113,113,.15),0 8px 24px rgba(127,29,29,.20);
+}
+.attempt-status.locked b{
+  color:#ff8e8e;
+  font-size:1.05rem;
+}
+.subject-card.attempt-locked{
+  opacity:.88;
+  border-color:rgba(248,113,113,.45);
+}
+.subject-card.attempt-locked .subject-code-gate input{
+  cursor:not-allowed;
+  opacity:.65;
+}
+.exam-attempt-banner{
+  margin:18px 0;
+  padding:18px 20px;
+  border-radius:16px;
+  border:2px solid rgba(248,113,113,.8);
+  background:linear-gradient(135deg,rgba(127,29,29,.38),rgba(69,10,10,.25));
+  box-shadow:0 0 0 3px rgba(239,68,68,.08),0 12px 30px rgba(127,29,29,.22);
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+}
+.exam-attempt-banner strong{
+  display:block;
+  color:#ffb3b3;
+  font-size:1.2rem;
+  margin-bottom:6px;
+}
+.exam-attempt-banner p{
+  margin:0;
+  line-height:1.65;
+}
+.attempt-banner-icon{
+  font-size:2rem;
+  line-height:1;
+}
+.critical-attempt-warning{
+  padding:14px 16px;
+  margin-bottom:12px;
+  border:2px solid rgba(248,113,113,.75);
+  border-radius:14px;
+  background:rgba(127,29,29,.28);
+  line-height:1.65;
+}
+.critical-attempt-warning > b{
+  display:block;
+  color:#ff9e9e;
+  font-size:1.15rem;
+  margin-bottom:5px;
+}
+.reveal-note{
+  padding:8px 2px 2px;
+}
+.danger-text{
+  color:#ff8e8e;
+  font-size:1.08rem;
+}
+
+
+/* =========================================================
+   ADMIN ATTEMPT UNLOCK
+   ========================================================= */
+.attempt-admin-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 9px;
+  border-radius:999px;
+  font-weight:800;
+  white-space:nowrap;
+  border:1px solid rgba(255,255,255,.14);
+}
+.attempt-admin-chip.available{
+  background:rgba(34,197,94,.13);
+  border-color:rgba(74,222,128,.42);
+  color:#9ff2b8;
+}
+.attempt-admin-chip.locked{
+  background:rgba(220,38,38,.20);
+  border-color:rgba(248,113,113,.65);
+  color:#ffaaaa;
+}
+.admin-attempt-notice{
+  border-color:rgba(245,158,11,.55);
+  background:rgba(120,75,5,.18);
+}
+.user-manage-actions{
+  flex-wrap:wrap;
+  min-width:220px;
+}
+
+
+/* =========================================================
+   REQUEST CENTER / SCORE APPROVAL / RETAKE
+   ========================================================= */
+.student-request-center{
+  margin:16px 0 20px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  background:rgba(255,255,255,.035);
+}
+.student-request-center h3{margin:3px 0}
+.request-list{display:grid;gap:10px;margin-top:12px}
+.request-item{
+  padding:13px 15px;
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:13px;
+  background:rgba(0,0,0,.14);
+}
+.request-item.status-approved{border-color:rgba(74,222,128,.4)}
+.request-item.status-rejected{border-color:rgba(248,113,113,.4)}
+.request-item.status-pending{border-color:rgba(245,158,11,.42)}
+.request-status{
+  padding:5px 9px;border-radius:999px;font-weight:800;font-size:.88rem;
+  background:rgba(255,255,255,.08)
+}
+.approved-score-box{
+  margin-top:10px;padding:13px;border-radius:12px;
+  border:2px solid rgba(74,222,128,.55);
+  background:rgba(22,101,52,.20);
+  display:grid;gap:3px
+}
+.approved-score-box strong{font-size:1.65rem}
+.retake-approved{
+  margin-top:10px;padding:11px 13px;border-radius:10px;
+  background:rgba(34,197,94,.14);border:1px solid rgba(74,222,128,.45);
+  font-weight:800
+}
+.post-exam-requests{
+  margin:18px 0;padding:16px;border-radius:16px;
+  border:1px solid rgba(56,189,248,.4);background:rgba(14,116,144,.10)
+}
+.request-warning{display:grid;gap:4px;margin-bottom:12px}
+.request-warning b{color:#7dd3fc;font-size:1.08rem}
+.request-action-row{flex-wrap:wrap}
+.admin-request-policy{margin:14px 0}
+.tab-badge{
+  display:inline-flex;min-width:22px;height:22px;padding:0 6px;margin-left:5px;
+  border-radius:999px;align-items:center;justify-content:center;
+  background:rgba(248,113,113,.22);font-size:.8rem
+}
+.request-admin-status{
+  display:inline-flex;padding:5px 8px;border-radius:999px;font-weight:800;white-space:nowrap
+}
+.request-admin-status.status-pending{background:rgba(245,158,11,.16);color:#ffd166}
+.request-admin-status.status-approved{background:rgba(34,197,94,.16);color:#9ff2b8}
+.request-admin-status.status-rejected{background:rgba(220,38,38,.18);color:#ffaaaa}
+.score-pass{color:#9ff2b8;font-weight:800}
+.score-fail{color:#ffaaaa;font-weight:800}
+.request-admin-actions{flex-wrap:wrap;min-width:170px}
+
+/* =========================================================
+   FULLSCREEN EXAM GUARD
+   ========================================================= */
+.fullscreen-guard{z-index:99998}
+.fullscreen-guard .box{
+  border:2px solid rgba(245,158,11,.75);
+  box-shadow:0 18px 60px rgba(0,0,0,.55)
+}
+.guard-icon{font-size:2.3rem;margin-bottom:6px}
+#forfeitBtn{
+  border-color:rgba(248,113,113,.65);
+}

@@ -48,6 +48,7 @@
   <nav class="tabs admin-tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="results">ผลสอบ</button>
+    <button class="tab" data-tab="requests">คำร้อง <span id="requestBadge" class="tab-badge">0</span></button>
     <button class="tab" data-tab="users">ผู้เข้าสอบ</button>
     <button class="tab" data-tab="questions">จัดการข้อสอบ</button>
     <button class="tab" data-tab="backup">สำรอง / ตั้งค่า</button>
@@ -114,7 +115,56 @@
     </div>
   </section>
 
-  <section id="tab-users" class="card hidden">
+  
+  <section id="tab-requests" class="card hidden">
+    <div class="row space">
+      <div>
+        <div class="kicker">STUDENT REQUESTS</div>
+        <h2>คำร้องจากนักศึกษา</h2>
+        <div class="muted">อนุมัติดูคะแนนเป็นรายบุคคล และอนุมัติสอบแก้เฉพาะกรณีคะแนนไม่ผ่าน</div>
+      </div>
+      <button id="refreshRequestsAdmin" class="btn secondary small">รีเฟรช</button>
+    </div>
+
+    <div class="notice admin-request-policy">
+      <b>เกณฑ์สอบไม่ผ่านสำหรับคำร้องสอบแก้: ต่ำกว่า 10.00 / 20</b><br>
+      การอนุมัติ “ดูคะแนน” จะแสดงคะแนนเฉพาะ User เจ้าของคำร้องเท่านั้น<br>
+      การอนุมัติ “สอบแก้” จะให้สิทธิ์สอบเพิ่ม 1 ครั้ง โดยไม่ลบคะแนนหรือประวัติเดิม
+    </div>
+
+    <div class="admin-filter-grid">
+      <div class="field"><label>ค้นหา</label><input id="requestSearch" placeholder="ชื่อ / เลขนักศึกษา / วิชา"></div>
+      <div class="field"><label>ประเภทคำร้อง</label>
+        <select id="requestTypeFilter">
+          <option value="">ทุกประเภท</option>
+          <option value="score_view">ขอดูคะแนน</option>
+          <option value="retake">ขอสอบแก้</option>
+        </select>
+      </div>
+      <div class="field"><label>สถานะ</label>
+        <select id="requestStatusFilter">
+          <option value="">ทุกสถานะ</option>
+          <option value="pending">รออนุมัติ</option>
+          <option value="approved">อนุมัติแล้ว</option>
+          <option value="rejected">ไม่อนุมัติ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>วันเวลา</th><th>ประเภท</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>วิชา</th>
+            <th>ผลสอบ</th><th>สถานะ</th><th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="requestRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+<section id="tab-users" class="card hidden">
     <div class="row space">
       <div><h2>ผู้เข้าสอบ / User</h2><div class="muted">เพิ่ม User ได้โดยตรง และลบสิทธิ์ User ออกจากระบบได้จากตารางนี้</div></div>
       <div class="row">
@@ -188,6 +238,12 @@
       <span class="muted">รายการที่แสดง</span><b id="visibleUserCount">0</b>
     </div>
 
+    <div class="notice compact-note admin-attempt-notice">
+      <b>การจัดการสิทธิ์สอบ:</b> แต่ละ User มีสิทธิ์สอบวิชาละ 2 ครั้ง เมื่อใช้ครบ 2/2 ระบบจะขึ้น “หมดสิทธิ์”
+      และ Admin สามารถกด <b>“ปลดล็อกให้สอบใหม่”</b> เพื่อรีเซ็ตเฉพาะ User + วิชานั้นกลับเป็น 0/2 ครั้ง
+      โดยคะแนนและประวัติสอบเดิมยังคงอยู่
+    </div>
+
     <div class="notice compact-note">
       ปุ่ม “ลบ User” จะลบโปรไฟล์ <b>studentUsers</b> และรายการเช็กอินของ User ทำให้บัญชีนั้นเข้าใช้งานระบบสอบไม่ได้อีก
       แต่จะเก็บผลสอบเดิมไว้เป็นหลักฐาน
@@ -195,7 +251,7 @@
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>สิทธิ์สอบ</th><th>จัดการ</th></tr></thead>
         <tbody id="regRows"></tbody>
       </table>
     </div>

@@ -7,7 +7,7 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-aut
 import { collection, getDocs, doc, deleteDoc, writeBatch, serverTimestamp, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);
-let questionRows=[],answerMap=new Map(),editId=null,lastRegs=[],lastSubs=[],lastStudentUsers=[],liveUnsubs=[],bankEnsured=false;
+let questionRows=[],answerMap=new Map(),editId=null,lastRegs=[],lastSubs=[],lastStudentUsers=[],lastExamAttempts=[],lastExamRequests=[],liveUnsubs=[],bankEnsured=false;
 const provisionApp=initializeApp(firebaseConfig,'nangrongProvisionApp');
 const provisionAuth=getAuth(provisionApp);
 const studentEmail=id=>`${id}@student.nangrong.invalid`;
@@ -26,6 +26,7 @@ function statusLabel(s){
   if(s==='exam_started')return 'กำลังสอบ';
   if(s==='completed')return 'ส่งข้อสอบแล้ว';
   if(s==='terminated')return 'ยุติการสอบ';
+  if(s==='forfeited')return 'สละสิทธิ์สอบ';
   return s||'-';
 }
 function statusClass(s){
@@ -113,6 +114,15 @@ function startLive(){
     lastStudentUsers=snap.docs.map(d=>({uid:d.id,...d.data()}));
     renderRealtimeAreas();
   },e=>console.warn('studentUsers live error',e)));
+  liveUnsubs.push(onSnapshot(collection(db,'examAttempts'),snap=>{
+    lastExamAttempts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderRealtimeAreas();
+  },e=>console.warn('examAttempts live error',e)));
+  liveUnsubs.push(onSnapshot(collection(db,'examRequests'),snap=>{
+    lastExamRequests=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderRequests();
+    updateRequestBadge();
+  },e=>console.warn('examRequests live error',e)));
   liveUnsubs.push(onSnapshot(collection(db,'submissions'),snap=>{
     lastSubs=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderRealtimeAreas();
@@ -125,6 +135,8 @@ function renderRealtimeAreas(){
   renderDashboard();
   renderRegs();
   renderResults();
+  renderRequests();
+  updateRequestBadge();
   renderQuestionSubjectManager();
 }
 
@@ -156,17 +168,20 @@ onAuthStateChanged(auth,async user=>{
 });
 
 async function fetchAll(){
-  const [q,a,r,s,u]=await Promise.all([
+  const [q,a,r,s,u,ea,er]=await Promise.all([
     getDocs(collection(db,'questions')),getDocs(collection(db,'answerKeys')),
     getDocs(collection(db,'studentCheckins')),getDocs(collection(db,'submissions')),
-    getDocs(collection(db,'studentUsers'))
+    getDocs(collection(db,'studentUsers')),getDocs(collection(db,'examAttempts')),
+    getDocs(collection(db,'examRequests'))
   ]);
   questionRows=q.docs.map(d=>({id:d.id,...d.data()}));
   answerMap=new Map(a.docs.map(d=>[d.id,d.data()]));
   lastRegs=r.docs.map(d=>({id:d.id,...d.data()}));
   lastSubs=s.docs.map(d=>({id:d.id,...d.data()}));
   lastStudentUsers=u.docs.map(d=>({uid:d.id,...d.data()}));
-  return {questions:questionRows,registrations:lastRegs,submissions:lastSubs,studentUsers:lastStudentUsers};
+  lastExamAttempts=ea.docs.map(d=>({id:d.id,...d.data()}));
+  lastExamRequests=er.docs.map(d=>({id:d.id,...d.data()}));
+  return {questions:questionRows,registrations:lastRegs,submissions:lastSubs,studentUsers:lastStudentUsers,examAttempts:lastExamAttempts,examRequests:lastExamRequests};
 }
 function scoreOf(s){
   let correct=0;
@@ -190,7 +205,7 @@ async function renderAll(){
     await fetchAll();
     fillClassSelect($('regClassFilter'),lastRegs);
     fillClassSelect($('resultClassFilter'),lastSubs);
-    updateMetrics();renderDashboard();renderResults();renderRegs();renderQuestionSubjectManager();renderQuestions();
+    updateMetrics();renderDashboard();renderResults();renderRegs();renderRequests();updateRequestBadge();renderQuestionSubjectManager();renderQuestions();
   }catch(e){
     console.error(e);
     alert('อ่านข้อมูลจาก Firebase ไม่สำเร็จ กรุณาตรวจสอบ Firestore Rules');
@@ -239,6 +254,155 @@ function renderResults(){
   });
 }
 
+
+function requestTypeLabel(t){
+  return t==='score_view'?'ขอดูคะแนน':t==='retake'?'ขอสอบแก้':t||'-';
+}
+function requestStatusLabel(s){
+  return s==='pending'?'รออนุมัติ':s==='approved'?'อนุมัติแล้ว':s==='rejected'?'ไม่อนุมัติ':s||'-';
+}
+function updateRequestBadge(){
+  const n=lastExamRequests.filter(r=>r.status==='pending').length;
+  if($('requestBadge'))$('requestBadge').textContent=n;
+}
+function submissionForRequest(r){
+  return lastSubs.find(s=>s.id===r.submissionId)||null;
+}
+function filteredRequests(){
+  const term=norm($('requestSearch')?.value);
+  const type=$('requestTypeFilter')?.value||'';
+  const status=$('requestStatusFilter')?.value||'';
+  return lastExamRequests.filter(r=>
+    (!type||r.requestType===type) &&
+    (!status||r.status===status) &&
+    matchesSearch([r.studentId,r.studentName,r.className,r.department,r.subjectCode,r.subjectName],term)
+  ).sort((a,b)=>{
+    if(a.status==='pending'&&b.status!=='pending')return -1;
+    if(b.status==='pending'&&a.status!=='pending')return 1;
+    return (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0);
+  });
+}
+function renderRequests(){
+  const tb=$('requestRows');
+  if(!tb)return;
+  tb.innerHTML='';
+  filteredRequests().forEach(r=>{
+    const sub=submissionForRequest(r);
+    const sc=sub?scoreOf(sub):null;
+    const validScore=sub && sub.status==='submitted';
+    const pass=validScore && sc.score>=10;
+    const scoreText=validScore
+      ? `${sc.score.toFixed(2)}/20 · ${sc.correct}/50 · ${pass?'ผ่าน':'ไม่ผ่าน'}`
+      : (sub?`สถานะ ${sub.status}`:'ไม่พบ Submission');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${fmtDate(r.createdAt||r.createdAtClient)}</td>
+      <td><b>${esc(requestTypeLabel(r.requestType))}</b></td>
+      <td>${esc(r.studentId)}</td>
+      <td>${esc(r.studentName)}</td>
+      <td>${esc(subjectLabel(r.subjectId,r.subjectCode,r.subjectName))}</td>
+      <td><span class="${validScore?(pass?'score-pass':'score-fail'):'muted'}">${esc(scoreText)}</span></td>
+      <td><span class="request-admin-status status-${esc(r.status||'pending')}">${esc(requestStatusLabel(r.status))}</span></td>
+      <td><div class="row request-admin-actions"></div></td>`;
+    const actions=tr.querySelector('.request-admin-actions');
+
+    if(r.status==='pending'){
+      const approve=document.createElement('button');
+      approve.className='btn ok small';
+      approve.textContent='อนุมัติ';
+      approve.onclick=()=>approveExamRequest(r,sub,sc);
+      actions.appendChild(approve);
+
+      const reject=document.createElement('button');
+      reject.className='btn danger small';
+      reject.textContent='ไม่อนุมัติ';
+      reject.onclick=()=>rejectExamRequest(r);
+      actions.appendChild(reject);
+    }else{
+      const reopen=document.createElement('button');
+      reopen.className='btn secondary small';
+      reopen.textContent='คืนเป็นรออนุมัติ';
+      reopen.onclick=async()=>{
+        await setDoc(doc(db,'examRequests',r.id),{
+          status:'pending',
+          adminMessage:'',
+          reviewedAt:serverTimestamp()
+        },{merge:true});
+      };
+      actions.appendChild(reopen);
+    }
+    tb.appendChild(tr);
+  });
+}
+async function approveExamRequest(r,sub,sc){
+  if(!sub||!sc){
+    alert('ไม่พบผลสอบที่เชื่อมกับคำร้องนี้');
+    return;
+  }
+  if(sub.status!=='submitted'){
+    alert('คำร้องนี้ไม่ได้มาจากการส่งข้อสอบปกติ จึงไม่สามารถอนุมัติได้');
+    return;
+  }
+
+  if(r.requestType==='score_view'){
+    if(!confirm(`อนุมัติให้ ${r.studentName||r.studentId} ดูคะแนนรายบุคคล ${sc.score.toFixed(2)}/20 ?`))return;
+    await setDoc(doc(db,'examRequests',r.id),{
+      status:'approved',
+      approvedScore:sc.score,
+      correctCount:sc.correct,
+      pass:sc.score>=10,
+      adminMessage:'Admin อนุมัติให้ดูคะแนนผลสอบรายบุคคลแล้ว',
+      reviewedAt:serverTimestamp()
+    },{merge:true});
+    return;
+  }
+
+  if(r.requestType==='retake'){
+    if(sc.score>=10){
+      alert(`ไม่สามารถอนุมัติคำร้องสอบแก้ได้ เพราะผลสอบ ${sc.score.toFixed(2)}/20 ผ่านเกณฑ์ 10/20 แล้ว`);
+      return;
+    }
+    if(!confirm(
+      `อนุมัติสอบแก้ให้ ${r.studentName||r.studentId}?\\n\\n`+
+      `คะแนนเดิม: ${sc.score.toFixed(2)}/20 (ไม่ผ่าน)\\n`+
+      `ระบบจะให้สิทธิ์สอบเพิ่ม 1 ครั้งสำหรับวิชา ${r.subjectCode}`
+    ))return;
+
+    const attemptRef=doc(db,'examAttempts',`${r.ownerUid}__${r.subjectId}`);
+    await setDoc(attemptRef,{
+      ownerUid:r.ownerUid,
+      studentId:r.studentId,
+      subjectId:r.subjectId,
+      subjectCode:r.subjectCode,
+      subjectName:r.subjectName,
+      attemptsUsed:1,
+      terminatedCount:0,
+      maxAttempts:2,
+      retakeGrantedByAdmin:true,
+      retakeGrantedAt:serverTimestamp(),
+      updatedAt:serverTimestamp()
+    },{merge:true});
+
+    await setDoc(doc(db,'examRequests',r.id),{
+      status:'approved',
+      approvedScore:sc.score,
+      correctCount:sc.correct,
+      pass:false,
+      adminMessage:'Admin อนุมัติสอบแก้แล้ว ได้รับสิทธิ์สอบเพิ่ม 1 ครั้ง',
+      reviewedAt:serverTimestamp()
+    },{merge:true});
+  }
+}
+async function rejectExamRequest(r){
+  const reason=prompt('ระบุเหตุผลที่ไม่อนุมัติ (เว้นว่างได้):','');
+  if(reason===null)return;
+  await setDoc(doc(db,'examRequests',r.id),{
+    status:'rejected',
+    adminMessage:reason||'Admin ไม่อนุมัติคำร้องนี้',
+    reviewedAt:serverTimestamp()
+  },{merge:true});
+}
+
 function filteredRegs(){
   const subject=$('regSubjectFilter').value;
   const room=$('regClassFilter').value;
@@ -251,16 +415,105 @@ function filteredRegs(){
     matchesSearch([r.studentId,r.name,r.className,r.department,r.subjectCode,r.subjectName],term)
   ).sort((a,b)=>(b.registeredAt?.seconds||0)-(a.registeredAt?.seconds||0));
 }
+function attemptForUserSubject(ownerUid,studentId,subjectId){
+  if(!subjectId)return null;
+  return lastExamAttempts.find(a=>
+    a.subjectId===subjectId &&
+    (
+      (ownerUid && a.ownerUid===ownerUid) ||
+      (!ownerUid && a.studentId===studentId)
+    )
+  ) || null;
+}
+
+function renderAttemptBadge(attempt){
+  const used=Math.max(0,Math.min(2,Number(attempt?.attemptsUsed||0)));
+  const terminated=Math.max(0,Number(attempt?.terminatedCount||0));
+  if(used>=2){
+    return `<span class="attempt-admin-chip locked">หมดสิทธิ์ ${used}/2${terminated?` · ยุติ ${terminated}`:''}</span>`;
+  }
+  return `<span class="attempt-admin-chip available">ใช้ ${used}/2 · เหลือ ${2-used}${terminated?` · ยุติ ${terminated}`:''}</span>`;
+}
+
 function renderRegs(){
   const rows=filteredRegs(),tb=$('regRows');tb.innerHTML='';
   $('visibleUserCount').textContent=rows.length;
   rows.forEach(r=>{
-    const tr=document.createElement('tr');
+    const ownerUid=r.ownerUid || lastStudentUsers.find(u=>u.studentId===r.studentId)?.uid || '';
     const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
-    tr.innerHTML=`<td>${fmtDate(r.registeredAt||r.registeredAtClient)}</td><td>${esc(subject)}</td><td>${esc(r.studentId)}</td><td>${esc(r.name)}</td><td>${esc(r.className)}</td><td>${esc(r.department)}</td><td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td><td><button class="btn danger small">ลบ User</button></td>`;
-    tr.querySelector('button').onclick=async()=>deleteUserFromSystem(r);
+    const attempt=attemptForUserSubject(ownerUid,r.studentId,r.subjectId);
+    const used=Math.max(0,Math.min(2,Number(attempt?.attemptsUsed||0)));
+    const canUnlock=!!r.subjectId && !!ownerUid && used>=2;
+
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${fmtDate(r.registeredAt||r.registeredAtClient)}</td>
+      <td>${esc(subject)}</td>
+      <td>${esc(r.studentId)}</td>
+      <td>${esc(r.name)}</td>
+      <td>${esc(r.className)}</td>
+      <td>${esc(r.department)}</td>
+      <td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td>
+      <td>${r.subjectId?renderAttemptBadge(attempt):'<span class="muted">-</span>'}</td>
+      <td>
+        <div class="row user-manage-actions">
+          ${canUnlock?'<button class="btn ok small unlock-attempt">ปลดล็อกให้สอบใหม่</button>':''}
+          <button class="btn danger small delete-user">ลบ User</button>
+        </div>
+      </td>`;
+
+    const unlockBtn=tr.querySelector('.unlock-attempt');
+    if(unlockBtn){
+      unlockBtn.onclick=()=>unlockExamAttemptsForUser(r,ownerUid);
+    }
+    tr.querySelector('.delete-user').onclick=()=>deleteUserFromSystem(r);
     tb.appendChild(tr);
   });
+}
+
+async function unlockExamAttemptsForUser(r,ownerUid){
+  if(!ownerUid||!r.subjectId){
+    alert('ไม่พบ UID หรือรายวิชาของ User นี้');
+    return;
+  }
+
+  const s=subjectById(r.subjectId);
+  const subjectName=s?`${s.code} ${s.name}`:(r.subjectCode||r.subjectName||r.subjectId);
+
+  if(!confirm(
+    `ปลดล็อกสิทธิ์สอบใหม่ให้ ${r.name||r.studentId}?\\n\\n`+
+    `รายวิชา: ${subjectName}\\n`+
+    `สิทธิ์จะถูกรีเซ็ตกลับเป็น 0/2 ครั้ง\\n`+
+    `คะแนนและประวัติสอบเดิมจะไม่ถูกลบ`
+  ))return;
+
+  try{
+    const ref=doc(db,'examAttempts',`${ownerUid}__${r.subjectId}`);
+    await setDoc(ref,{
+      ownerUid,
+      studentId:r.studentId,
+      subjectId:r.subjectId,
+      subjectCode:s?.code||r.subjectCode||'',
+      subjectName:s?.name||r.subjectName||'',
+      attemptsUsed:0,
+      terminatedCount:0,
+      maxAttempts:2,
+      unlockedByAdmin:true,
+      unlockedAt:serverTimestamp(),
+      unlockedAtClient:new Date().toISOString(),
+      updatedAt:serverTimestamp(),
+      updatedAtClient:new Date().toISOString()
+    },{merge:true});
+
+    alert(
+      `ปลดล็อกสำเร็จ\\n\\n${r.name||r.studentId}\\n${subjectName}\\n`+
+      `สิทธิ์ใหม่: 0/2 ครั้ง`
+    );
+    await renderAll();
+  }catch(e){
+    console.error(e);
+    alert('ปลดล็อกสิทธิ์ไม่สำเร็จ: '+(e.message||e));
+  }
 }
 
 async function deleteUserFromSystem(r){
@@ -520,11 +773,14 @@ $('deleteAllQuestions').onclick=async()=>{
 
 ['resultSubjectFilter','resultClassFilter'].forEach(id=>$(id).onchange=renderResults);
 $('resultSearch').oninput=renderResults;
+$('requestSearch').oninput=renderRequests;
+['requestTypeFilter','requestStatusFilter'].forEach(id=>$(id).onchange=renderRequests);
+$('refreshRequestsAdmin').onclick=renderAll;
 ['regSubjectFilter','regClassFilter','regStatusFilter'].forEach(id=>$(id).onchange=renderRegs);
 $('regSearch').oninput=renderRegs;
 $('questionSubjectFilter').onchange=renderQuestions;
 
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');
-  ['dashboard','results','users','questions','backup'].forEach(t=>$(`tab-${t}`).classList.toggle('hidden',t!==b.dataset.tab));
+  ['dashboard','results','requests','users','questions','backup'].forEach(t=>$(`tab-${t}`).classList.toggle('hidden',t!==b.dataset.tab));
 });
