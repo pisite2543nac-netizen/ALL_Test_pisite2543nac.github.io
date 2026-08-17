@@ -359,10 +359,12 @@ async function createAttemptAndRegistration(subject){
   const uid=studentAuth.currentUser?.uid;
   if(!uid)throw new Error('ไม่พบข้อมูลบัญชีผู้เข้าสอบ');
 
-  // deterministic registration id remains compatible with existing system
-  const regId=await sha256(`${subject.id}::${student.studentId}`);
+  // IMPORTANT:
+  // สร้าง Registration ID ใหม่ทุกครั้งที่เริ่มสอบ
+  // ไม่เขียนทับ Registration ของรอบก่อน
   const attemptRef=doc(studentDb,'examAttempts',`${uid}__${subject.id}`);
-  const regRef=doc(studentDb,'registrations',regId);
+  const regRef=doc(collection(studentDb,'registrations'));
+  const regId=regRef.id;
   const newAttemptToken=randomToken();
 
   const result=await runTransaction(studentDb,async tx=>{
@@ -378,6 +380,7 @@ async function createAttemptAndRegistration(subject){
     }
 
     const next=used+1;
+
     const attemptData={
       ownerUid:uid,
       studentId:student.studentId,
@@ -390,14 +393,18 @@ async function createAttemptAndRegistration(subject){
       updatedAt:serverTimestamp(),
       updatedAtClient:new Date().toISOString()
     };
+
     if(!attemptSnap.exists()){
       attemptData.createdAt=serverTimestamp();
       attemptData.createdAtClient=new Date().toISOString();
     }
 
     const registrationData={
-      ...student,
       ownerUid:uid,
+      studentId:student.studentId,
+      name:student.name,
+      className:student.className,
+      department:student.department,
       subjectId:subject.id,
       subjectCode:subject.code,
       subjectName:subject.name,
@@ -407,14 +414,20 @@ async function createAttemptAndRegistration(subject){
       registeredAt:serverTimestamp(),
       registeredAtClient:new Date().toISOString(),
       status:'started',
-      wantsKey
+      wantsKey:!!wantsKey
     };
 
-    // ทั้งสองรายการสำเร็จพร้อมกัน หรือยกเลิกพร้อมกัน
+    // Atomic: ถ้ารายการใดรายการหนึ่งไม่ผ่าน Rules
+    // ทั้ง attempt และ registration จะไม่ถูกเขียน
     tx.set(attemptRef,attemptData,{merge:true});
-    tx.set(regRef,registrationData,{merge:false});
+    tx.set(regRef,registrationData);
 
-    return {registrationId:regId,attemptToken:newAttemptToken,attemptsUsed:next,terminatedCount:terminated};
+    return {
+      registrationId:regId,
+      attemptToken:newAttemptToken,
+      attemptsUsed:next,
+      terminatedCount:terminated
+    };
   });
 
   attemptToken=result.attemptToken;
@@ -767,7 +780,7 @@ async function beginExamFromInstructions(){
       return;
     }
     if(e?.code==='permission-denied'){
-      showMsg('instructionMsg','[20260817-EXAMFIX-V2] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ examAttempts/registrations กรุณา Publish Rules EXAM START FIX V2');
+      showMsg('instructionMsg','[20260817-EXAMFIX-V3] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ กรุณา Publish Rules EXAM START FIX V3');
       return;
     }
     showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');

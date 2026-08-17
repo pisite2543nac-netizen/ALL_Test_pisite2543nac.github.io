@@ -95,12 +95,8 @@ service cloud.firestore {
     // 1 User x 1 Subject = maximum 2 attempts
     // =====================================================
     match /examAttempts/{attemptId} {
-      function ownsAttempt() {
-        return signedIn()
-          && resource.data.ownerUid == request.auth.uid;
-      }
 
-      function createsOwnAttempt() {
+      function ownAttemptCreate() {
         return signedIn()
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.studentId is string
@@ -110,53 +106,38 @@ service cloud.firestore {
           && request.resource.data.maxAttempts == 2;
       }
 
-      // Student can create first attempt only.
-      allow create: if isAdmin() || createsOwnAttempt();
+      function ownAttemptUpdate() {
+        return signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.subjectId == resource.data.subjectId
+          && request.resource.data.maxAttempts == 2
+          && request.resource.data.attemptsUsed >= 0
+          && request.resource.data.attemptsUsed <= 2
+          && request.resource.data.terminatedCount >= 0
+          && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed
+          && (
+            // ใช้สิทธิ์สอบใหม่: +1 ครั้ง
+            (
+              request.resource.data.attemptsUsed == resource.data.attemptsUsed + 1
+              && request.resource.data.terminatedCount == resource.data.terminatedCount
+            )
+            ||
+            // บันทึกการถูกยุติ: terminated +1
+            (
+              request.resource.data.attemptsUsed == resource.data.attemptsUsed
+              && request.resource.data.terminatedCount == resource.data.terminatedCount + 1
+            )
+          );
+      }
 
-      // Student can only:
-      // A) increment attemptsUsed exactly +1 up to 2
-      // B) increment terminatedCount exactly +1, never above attemptsUsed
-      allow update: if isAdmin() || (
-        signedIn()
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.studentId == resource.data.studentId
-        && request.resource.data.subjectId == resource.data.subjectId
-        && request.resource.data.maxAttempts == 2
-        && (
-          // Normal current document
-          resource.data.ownerUid == request.auth.uid
-
-          // Legacy migration: old examAttempts may not have ownerUid.
-          // The authenticated user may claim only a record whose studentId
-          // and subjectId remain unchanged.
-          || !("ownerUid" in resource.data)
-        )
-        && (
-          (
-            request.resource.data.attemptsUsed == resource.data.attemptsUsed + 1
-            && request.resource.data.attemptsUsed <= 2
-            && request.resource.data.terminatedCount == resource.data.terminatedCount
-          )
-          ||
-          (
-            request.resource.data.attemptsUsed == resource.data.attemptsUsed
-            && request.resource.data.terminatedCount == resource.data.terminatedCount + 1
-            && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed
-          )
-        )
-      );
+      allow create: if isAdmin() || ownAttemptCreate();
+      allow update: if isAdmin() || ownAttemptUpdate();
 
       allow read: if isAdmin()
         || (
           signedIn()
-          && (
-            resource.data.ownerUid == request.auth.uid
-            || (
-              !("ownerUid" in resource.data)
-              && exists(/databases/$(database)/documents/studentUsers/$(request.auth.uid))
-              && get(/databases/$(database)/documents/studentUsers/$(request.auth.uid)).data.studentId == resource.data.studentId
-            )
-          )
+          && resource.data.ownerUid == request.auth.uid
         );
 
       allow delete: if isAdmin();
@@ -167,7 +148,8 @@ service cloud.firestore {
     // =====================================================
     match /registrations/{registrationId} {
       function validRegistration() {
-        return request.resource.data.studentId is string
+        return request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.studentId is string
           && request.resource.data.name is string
           && request.resource.data.className is string
           && request.resource.data.department is string
@@ -175,46 +157,22 @@ service cloud.firestore {
           && request.resource.data.subjectCode is string
           && request.resource.data.subjectName is string
           && request.resource.data.attemptToken is string
+          && request.resource.data.attemptNumber is int
+          && request.resource.data.attemptNumber >= 1
+          && request.resource.data.attemptNumber <= 2
+          && request.resource.data.maxAttempts == 2
           && request.resource.data.status == "started";
       }
 
-      allow create: if
-        (
-          isAdmin()
-          || (
-            signedIn()
-            && request.resource.data.ownerUid == request.auth.uid
-          )
-          || request.auth == null
-        )
-        && validRegistration();
-
-      allow update: if
-        isAdmin()
+      // Student creates a NEW registration for every attempt.
+      allow create: if isAdmin()
         || (
           signedIn()
-          && request.resource.data.ownerUid == request.auth.uid
           && validRegistration()
-          && (
-            // Current authenticated registration owned by this User
-            resource.data.ownerUid == request.auth.uid
-
-            // Migration path for registration documents created by
-            // older/anonymous versions before ownerUid existed.
-            || (
-              resource.data.studentId == request.resource.data.studentId
-              && resource.data.subjectId == request.resource.data.subjectId
-            )
-          )
-        )
-        || (
-          request.auth == null
-          && validRegistration()
-          && resource.data.studentId == request.resource.data.studentId
-          && resource.data.subjectId == request.resource.data.subjectId
         );
 
-      allow read, delete: if isAdmin();
+      // Student never needs to overwrite a registration.
+      allow read, update, delete: if isAdmin();
     }
 
     // =====================================================

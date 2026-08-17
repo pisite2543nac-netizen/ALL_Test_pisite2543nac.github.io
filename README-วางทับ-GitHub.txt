@@ -219,3 +219,15 @@ Version: 20260817-EXAMFIX-V2
 - Rules รองรับ legacy registrations
 - Attempt + Registration สร้างแบบ Transaction เดียว: ไม่สำเร็จ = ไม่หักสิทธิ์
 - หลัง Upload GitHub และ Publish Rules ให้ตรวจว่ามุมขวาล่างขึ้น 20260817-EXAMFIX-V2
+
+
+EXAM START FIX V3
+Version: 20260817-EXAMFIX-V3
+สาเหตุที่แก้:
+- Registration เดิมใช้ ID ซ้ำต่อ User/วิชา ทำให้รอบใหม่กลายเป็น update document เก่า
+- V3 เปลี่ยนเป็น Registration ID ใหม่ทุกครั้งที่เริ่มสอบ
+- นักศึกษาจึงใช้ Firestore create เท่านั้น ไม่แก้ Registration เก่า
+- examAttempts + registration ใหม่ ยังถูกสร้างใน Transaction เดียว
+- ถ้า Rules ปฏิเสธ จะไม่หักสิทธิ์สอบ
+- Firestore Rules ของ registrations ง่ายและชัดขึ้น
+- ต้อง Publish firestore_rules_EXAM_START_FIX_V3.rules
