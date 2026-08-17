@@ -58,19 +58,28 @@
   <div id="registerPanel" class="hidden">
     <div class="auth-heading">
       <div class="kicker">NEW STUDENT ACCOUNT</div>
-      <h2>ลงทะเบียนผู้เข้าสอบ</h2>
-      <p class="muted">ลงทะเบียนครั้งแรกเพียงครั้งเดียว จากนั้นใช้เลขนักศึกษาและรหัสผ่าน Login ได้</p>
+      <h2>ลงทะเบียนผู้ใช้งาน</h2>
+      <p class="muted">ลงทะเบียนครั้งแรกเพียงครั้งเดียว ข้อมูลชั้น ห้อง แผนก และสาขาจะถูกใช้จัดหมวดหมู่ในหน้า Admin</p>
     </div>
 
-    <div class="grid two">
+    <div class="registration-info-banner">
+      <b>กรอกข้อมูลให้ตรงกับข้อมูลนักศึกษา</b>
+      <span>หลังลงทะเบียนแล้ว สามารถ Login ด้วยเลขประจำตัวนักศึกษาและรหัสผ่านได้ทันที</span>
+    </div>
+
+    <div class="grid two registration-profile-grid">
       <div class="field">
         <label>เลขประจำตัวนักศึกษา</label>
-        <input id="studentId" inputmode="numeric" autocomplete="off" placeholder="กรอกเฉพาะตัวเลข">
+        <input id="studentId" inputmode="numeric" maxlength="15" autocomplete="off"
+          placeholder="เลขประจำตัวนักศึกษา สูงสุด 15 หลัก เช่น 11111111">
+        <small>กรอกตัวเลขเท่านั้น สูงสุด 15 หลัก</small>
       </div>
+
       <div class="field">
         <label>ชื่อ-นามสกุล</label>
-        <input id="name" autocomplete="name" placeholder="เช่น เมี่ยง กาโหลย">
+        <input id="name" autocomplete="name" placeholder="ชื่อ เมี่ยง กาโหลย">
       </div>
+
       <div class="field">
         <label>ระดับชั้น</label>
         <select id="classLevel">
@@ -84,6 +93,7 @@
           <option value="ปวช.4">ปวช.4</option>
         </select>
       </div>
+
       <div class="field">
         <label>ห้อง / กลุ่ม</label>
         <select id="classRoom">
@@ -96,10 +106,22 @@
           <option value="/6">/6</option>
         </select>
       </div>
+
       <div class="field">
         <label>แผนกวิชา</label>
-        <input id="department" placeholder="เช่น เทคโนโลยีสารสนเทศ">
+        <select id="department">
+          <option value="">-- เลือกแผนก --</option>
+        </select>
       </div>
+
+      <div class="field">
+        <label>สาขาวิชา</label>
+        <select id="major" disabled>
+          <option value="">-- เลือกสาขาวิชา --</option>
+        </select>
+        <small>รหัสสาขา: <b id="majorCodeText">-</b></small>
+      </div>
+
       <div class="field">
         <label>สร้างรหัสผ่าน</label>
         <div class="password-wrap">
@@ -107,6 +129,7 @@
           <button class="password-toggle" type="button" data-target="registerPassword">แสดง</button>
         </div>
       </div>
+
       <div class="field">
         <label>ยืนยันรหัสผ่าน</label>
         <div class="password-wrap">
@@ -124,15 +147,15 @@
       </div>
     </div>
 
-    <label class="row accept">
+    <label class="row accept registration-accept">
       <input type="checkbox" id="accept">
-      <span>ข้าพเจ้ายืนยันว่าข้อมูลถูกต้อง และยอมรับคำชี้แจงการสอบ</span>
+      <span>ข้าพเจ้ายืนยันว่าข้อมูลถูกต้อง และยอมรับคำชี้แจงการใช้งานระบบและการสอบ</span>
     </label>
 
     <div id="registerMsg" class="error hidden"></div>
 
-    <div class="row space topgap">
-      <span class="muted">เมื่อลงทะเบียนสำเร็จ ชื่อจะปรากฏในหน้า Admin ทันที</span>
+    <div class="row space topgap registration-submit-row">
+      <span class="muted">ลงทะเบียนสำเร็จแล้ว ข้อมูลจะปรากฏในหน้า Admin แบบจัดหมวดหมู่</span>
       <button class="btn" id="registerContinueBtn" type="button">ลงทะเบียนและสร้างบัญชี</button>
     </div>
   </div>
@@ -152,6 +175,7 @@
     </div>
   </div>
 
+  <div class="notice emergency-live-banner"><b>EMERGENCY STABLE MODE</b> · ระบบสอบพร้อมใช้งาน: เริ่มสอบ → ส่งคำตอบ → คะแนนขึ้น Admin</div>
   <div id="studentSummary" class="student-preview"></div>
 
   <div id="studentRequestCenter" class="student-request-center">
@@ -221,14 +245,6 @@
       <div class="instruction-icon">✅</div>
       <b>การส่งข้อสอบ</b>
       <span>ตรวจคำตอบให้ครบก่อนส่ง เมื่อส่งแล้วไม่สามารถกลับมาแก้คำตอบได้</span>
-    </div>
-  </div>
-
-  <div class="exam-attempt-banner">
-    <div class="attempt-banner-icon">🚨</div>
-    <div>
-      <strong>สำคัญมาก: แต่ละ User มีสิทธิ์สอบรายวิชาละ 2 ครั้งเท่านั้น</strong>
-      <p>เมื่อกด “เริ่มทำข้อสอบ” จะนับเป็นการใช้สิทธิ์ 1 ครั้งทันที และถ้าการสอบถูกยุติจากการทำผิดกติกา รอบนั้นจะถูกนับเป็น 1 ครั้งเช่นกัน เมื่อใช้ครบ 2 ครั้ง ระบบจะยุติสิทธิ์สอบรายวิชานั้นทันที และต้องติดต่อ Admin เพื่อขอปลดล็อกสิทธิ์สอบใหม่</p>
     </div>
   </div>
 
@@ -341,7 +357,7 @@
   </div>
 </div>
 <div id="lockOverlay" class="overlay hidden"><div class="box"><h2>⛔ ยุติการสอบทันที</h2><p>ระบบตรวจพบพฤติกรรมต้องสงสัยเกิน 2 ครั้ง การสอบรอบนี้ถูกยุติและนับเป็นสิทธิ์สอบ 1 ครั้ง</p><p><b>หากหมดสิทธิ์สอบ กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่</b></p><button class="btn" onclick="location.reload()">กลับหน้าหลัก</button></div></div>
-<script type="module" src="student.js?v=20260817-EXAMFIX-V5"></script>
-<div id="systemVersionBadge" class="system-version-badge">System 20260817-EXAMFIX-V5</div>
+<script type="module" src="student.js?v=20260817-STABLE-CATEGORIZED-V1"></script>
+<div id="systemVersionBadge" class="system-version-badge">System 20260817-STABLE-CATEGORIZED-V1</div>
 </body>
 </html>

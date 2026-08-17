@@ -1,6 +1,7 @@
 import { auth, db, isFirebaseConfigured } from './firebase-service.js';
 import { firebaseConfig, ADMIN_USERNAME, ADMIN_AUTH_EMAIL, ADMIN_UID } from './firebase-config.js';
 import { SUBJECTS } from './subjects.js';
+import { CLASS_LEVELS, CLASS_ROOMS, DEPARTMENTS, departmentById, majorById, normalizedStudentMeta } from './student-catalog.js';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -35,14 +36,73 @@ function statusClass(s){
   if(s==='terminated')return 'bad';
   return 'info';
 }
-function uniqueClasses(source){
-  return [...new Set(source.map(x=>norm(x.className||x.student?.className)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'));
-}
-function fillClassSelect(el,source){
+function fillSimpleSelect(el, values, label){
+  if(!el)return;
   const current=el.value;
-  el.innerHTML='<option value="">ทุกชั้น / ห้อง</option>';
-  uniqueClasses(source).forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;el.appendChild(o)});
+  el.innerHTML=`<option value="">${label}</option>`;
+  values.forEach(v=>{
+    const o=document.createElement('option');
+    o.value=v;
+    o.textContent=v;
+    el.appendChild(o);
+  });
   if([...el.options].some(o=>o.value===current))el.value=current;
+}
+function fillDepartmentFilter(el,label='ทุกแผนก'){
+  if(!el)return;
+  const current=el.value;
+  el.innerHTML=`<option value="">${label}</option>`;
+  DEPARTMENTS.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.name;
+    o.textContent=d.name;
+    el.appendChild(o);
+  });
+  if([...el.options].some(o=>o.value===current))el.value=current;
+}
+function allMajors(){
+  return DEPARTMENTS.flatMap(d=>d.majors.map(m=>m.name));
+}
+function fillMajorFilter(el,label='ทุกสาขา'){
+  fillSimpleSelect(el,allMajors(),label);
+}
+function fillAdminDepartmentSelect(){
+  const el=$('newStudentDept');
+  if(!el)return;
+  el.innerHTML='<option value="">-- เลือกแผนก --</option>';
+  DEPARTMENTS.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.id;
+    o.textContent=d.name;
+    el.appendChild(o);
+  });
+}
+function fillAdminMajorSelect(departmentId, selected=''){
+  const el=$('newStudentMajor');
+  if(!el)return;
+  const d=departmentById(departmentId);
+  el.innerHTML='<option value="">-- เลือกสาขาวิชา --</option>';
+  if(!d){
+    el.disabled=true;
+    $('newStudentMajorCode').textContent='-';
+    return;
+  }
+  d.majors.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;
+    o.textContent=`${m.name} (${m.code})`;
+    el.appendChild(o);
+  });
+  el.disabled=false;
+  if(selected)el.value=selected;
+  updateAdminMajorCode();
+}
+function updateAdminMajorCode(){
+  const m=majorById($('newStudentDept')?.value,$('newStudentMajor')?.value);
+  if($('newStudentMajorCode'))$('newStudentMajorCode').textContent=m?.code||'-';
+}
+function userMeta(x={}){
+  return normalizedStudentMeta(x.student||x);
 }
 function matchesSearch(parts,term){
   if(!term)return true;
@@ -53,6 +113,17 @@ function matchesSearch(parts,term){
 [$('resultSubjectFilter'),$('regSubjectFilter'),$('questionSubjectFilter')].forEach(x=>fillSubjectSelect(x,true));
 fillSubjectSelect($('qSubject'));
 fillSubjectSelect($('newStudentSubject'),true,'ยังไม่กำหนดวิชา');
+fillSimpleSelect($('resultLevelFilter'),CLASS_LEVELS,'ทุกระดับชั้น');
+fillSimpleSelect($('resultRoomFilter'),CLASS_ROOMS,'ทุกห้อง');
+fillDepartmentFilter($('resultDeptFilter'));
+fillMajorFilter($('resultMajorFilter'));
+fillSimpleSelect($('regLevelFilter'),CLASS_LEVELS,'ทุกระดับชั้น');
+fillSimpleSelect($('regRoomFilter'),CLASS_ROOMS,'ทุกห้อง');
+fillDepartmentFilter($('regDeptFilter'));
+fillMajorFilter($('regMajorFilter'));
+fillAdminDepartmentSelect();
+fillAdminMajorSelect('');
+
 
 async function loadBuiltInBank(){
   const res=await fetch('./initial-question-bank-all-subjects.json',{cache:'no-store'});
@@ -129,8 +200,6 @@ function startLive(){
   },e=>console.warn('submissions live error',e)));
 }
 function renderRealtimeAreas(){
-  fillClassSelect($('regClassFilter'),lastRegs);
-  fillClassSelect($('resultClassFilter'),lastSubs);
   updateMetrics();
   renderDashboard();
   renderRegs();
@@ -203,8 +272,6 @@ function updateMetrics(){
 async function renderAll(){
   try{
     await fetchAll();
-    fillClassSelect($('regClassFilter'),lastRegs);
-    fillClassSelect($('resultClassFilter'),lastSubs);
     updateMetrics();renderDashboard();renderResults();renderRegs();renderRequests();updateRequestBadge();renderQuestionSubjectManager();renderQuestions();
   }catch(e){
     console.error(e);
@@ -236,20 +303,47 @@ $('refreshDashboard').onclick=renderAll;
 
 function filteredResults(){
   const subject=$('resultSubjectFilter').value;
-  const room=$('resultClassFilter').value;
+  const level=$('resultLevelFilter').value;
+  const room=$('resultRoomFilter').value;
+  const dept=$('resultDeptFilter').value;
+  const major=$('resultMajorFilter').value;
   const term=norm($('resultSearch').value);
-  return lastSubs.filter(s=>
-    (!subject||s.subjectId===subject) &&
-    (!room||norm(s.student?.className)===room) &&
-    matchesSearch([s.student?.studentId,s.student?.name,s.student?.className,s.student?.department,s.subjectCode,s.subjectName],term)
-  ).sort((a,b)=>(b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0));
+
+  return lastSubs.filter(s=>{
+    const meta=userMeta(s);
+    return (!subject||s.subjectId===subject)
+      && (!level||meta.classLevel===level)
+      && (!room||meta.classRoom===room)
+      && (!dept||meta.department===dept)
+      && (!major||meta.major===major)
+      && matchesSearch([
+        s.student?.studentId,s.student?.name,
+        meta.classLevel,meta.classRoom,meta.className,
+        meta.department,meta.major,meta.majorCode,
+        s.subjectCode,s.subjectName
+      ],term);
+  }).sort((a,b)=>(b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0));
 }
 function renderResults(){
   const tb=$('resultRows');tb.innerHTML='';
   filteredResults().forEach(s=>{
-    const sc=scoreOf(s),tr=document.createElement('tr');
-    tr.innerHTML=`<td>${fmtDate(s.submittedAt||s.submittedAtClient)}</td><td>${esc(subjectLabel(s.subjectId,s.subjectCode,s.subjectName))}</td><td>${esc(s.student?.studentId)}</td><td>${esc(s.student?.name)}</td><td>${esc(s.student?.className)}</td><td>${esc(s.student?.department)}</td><td><span class="status-chip ${statusClass(s.status)}">${esc(s.status||'submitted')}</span></td><td>${sc.correct}/50</td><td><b>${sc.score.toFixed(2)}</b></td><td><button class="btn danger small">ลบ</button></td>`;
-    tr.querySelector('button').onclick=async()=>{if(confirm('ลบผลสอบรายการนี้?'))await deleteDoc(doc(db,'submissions',s.id))};
+    const sc=scoreOf(s),tr=document.createElement('tr'),meta=userMeta(s);
+    tr.innerHTML=`
+      <td>${fmtDate(s.submittedAt||s.submittedAtClient)}</td>
+      <td>${esc(subjectLabel(s.subjectId,s.subjectCode,s.subjectName))}</td>
+      <td>${esc(s.student?.studentId)}</td>
+      <td>${esc(s.student?.name)}</td>
+      <td>${esc(meta.classLevel||'-')}</td>
+      <td>${esc(meta.classRoom||'-')}</td>
+      <td>${esc(meta.department||'-')}</td>
+      <td>${esc(meta.major||'-')}</td>
+      <td><span class="status-chip ${statusClass(s.status)}">${esc(s.status||'submitted')}</span></td>
+      <td>${sc.correct}/50</td>
+      <td><b>${sc.score.toFixed(2)}</b></td>
+      <td><button class="btn danger small">ลบ</button></td>`;
+    tr.querySelector('button').onclick=async()=>{
+      if(confirm('ลบผลสอบรายการนี้?'))await deleteDoc(doc(db,'submissions',s.id))
+    };
     tb.appendChild(tr);
   });
 }
@@ -275,7 +369,7 @@ function filteredRequests(){
   return lastExamRequests.filter(r=>
     (!type||r.requestType===type) &&
     (!status||r.status===status) &&
-    matchesSearch([r.studentId,r.studentName,r.className,r.department,r.subjectCode,r.subjectName],term)
+    matchesSearch([r.studentId,r.studentName,r.classLevel,r.classRoom,r.className,r.department,r.major,r.majorCode,r.subjectCode,r.subjectName],term)
   ).sort((a,b)=>{
     if(a.status==='pending'&&b.status!=='pending')return -1;
     if(b.status==='pending'&&a.status!=='pending')return 1;
@@ -368,27 +462,14 @@ async function approveExamRequest(r,sub,sc){
       `ระบบจะให้สิทธิ์สอบเพิ่ม 1 ครั้งสำหรับวิชา ${r.subjectCode}`
     ))return;
 
-    const attemptRef=doc(db,'examAttempts',`${r.ownerUid}__${r.subjectId}`);
-    await setDoc(attemptRef,{
-      ownerUid:r.ownerUid,
-      studentId:r.studentId,
-      subjectId:r.subjectId,
-      subjectCode:r.subjectCode,
-      subjectName:r.subjectName,
-      attemptsUsed:1,
-      terminatedCount:0,
-      maxAttempts:2,
-      retakeGrantedByAdmin:true,
-      retakeGrantedAt:serverTimestamp(),
-      updatedAt:serverTimestamp()
-    },{merge:true});
-
+    // Stable Core: ไม่ใช้ examAttempts เป็นเงื่อนไขเข้าสอบ
+    // Admin อนุมัติคำร้องสอบแก้โดยบันทึกสถานะคำร้องเท่านั้น
     await setDoc(doc(db,'examRequests',r.id),{
       status:'approved',
       approvedScore:sc.score,
       correctCount:sc.correct,
       pass:false,
-      adminMessage:'Admin อนุมัติสอบแก้แล้ว ได้รับสิทธิ์สอบเพิ่ม 1 ครั้ง',
+      adminMessage:'Admin อนุมัติสอบแก้แล้ว สามารถเข้าสอบรายวิชานี้ใหม่ได้',
       reviewedAt:serverTimestamp()
     },{merge:true});
   }
@@ -403,69 +484,86 @@ async function rejectExamRequest(r){
   },{merge:true});
 }
 
+function latestCheckinForUser(u){
+  const rows=lastRegs.filter(r=>
+    (u.uid && r.ownerUid===u.uid) ||
+    (!r.ownerUid && r.studentId===u.studentId)
+  );
+  return rows.sort((a,b)=>{
+    const aa=a.examStartedAt?.seconds||a.registeredAt?.seconds||Date.parse(a.examStartedAtClient||a.registeredAtClient||0)/1000||0;
+    const bb=b.examStartedAt?.seconds||b.registeredAt?.seconds||Date.parse(b.examStartedAtClient||b.registeredAtClient||0)/1000||0;
+    return bb-aa;
+  })[0]||{};
+}
+function uniqueUserRows(){
+  return lastStudentUsers.map(u=>{
+    const latest=latestCheckinForUser(u);
+    const meta=normalizedStudentMeta(u);
+    return {
+      ...latest,
+      ...u,
+      uid:u.uid,
+      ownerUid:u.uid,
+      studentId:u.studentId||latest.studentId||'',
+      name:u.name||latest.name||'',
+      ...meta,
+      status:latest.status||'registered',
+      subjectId:latest.subjectId||'',
+      subjectCode:latest.subjectCode||'',
+      subjectName:latest.subjectName||'',
+      latestAt:latest.examStartedAt||latest.registeredAt||latest.examStartedAtClient||latest.registeredAtClient||u.createdAt||u.createdAtClient
+    };
+  });
+}
 function filteredRegs(){
   const subject=$('regSubjectFilter').value;
-  const room=$('regClassFilter').value;
+  const level=$('regLevelFilter').value;
+  const room=$('regRoomFilter').value;
+  const dept=$('regDeptFilter').value;
+  const major=$('regMajorFilter').value;
   const status=$('regStatusFilter').value;
   const term=norm($('regSearch').value);
-  return lastRegs.filter(r=>
+
+  return uniqueUserRows().filter(r=>
     (!subject||r.subjectId===subject) &&
-    (!room||norm(r.className)===room) &&
+    (!level||r.classLevel===level) &&
+    (!room||r.classRoom===room) &&
+    (!dept||r.department===dept) &&
+    (!major||r.major===major) &&
     (!status||r.status===status) &&
-    matchesSearch([r.studentId,r.name,r.className,r.department,r.subjectCode,r.subjectName],term)
-  ).sort((a,b)=>(b.registeredAt?.seconds||0)-(a.registeredAt?.seconds||0));
+    matchesSearch([
+      r.studentId,r.name,r.classLevel,r.classRoom,r.className,
+      r.department,r.major,r.majorCode,r.subjectCode,r.subjectName
+    ],term)
+  ).sort((a,b)=>{
+    const aa=a.latestAt?.seconds||Date.parse(a.latestAt||0)/1000||0;
+    const bb=b.latestAt?.seconds||Date.parse(b.latestAt||0)/1000||0;
+    return bb-aa;
+  });
 }
-function attemptForUserSubject(ownerUid,studentId,subjectId){
-  if(!subjectId)return null;
-  return lastExamAttempts.find(a=>
-    a.subjectId===subjectId &&
-    (
-      (ownerUid && a.ownerUid===ownerUid) ||
-      (!ownerUid && a.studentId===studentId)
-    )
-  ) || null;
-}
-
-function renderAttemptBadge(attempt){
-  const used=Math.max(0,Math.min(2,Number(attempt?.attemptsUsed||0)));
-  const terminated=Math.max(0,Number(attempt?.terminatedCount||0));
-  if(used>=2){
-    return `<span class="attempt-admin-chip locked">หมดสิทธิ์ ${used}/2${terminated?` · ยุติ ${terminated}`:''}</span>`;
-  }
-  return `<span class="attempt-admin-chip available">ใช้ ${used}/2 · เหลือ ${2-used}${terminated?` · ยุติ ${terminated}`:''}</span>`;
-}
-
 function renderRegs(){
   const rows=filteredRegs(),tb=$('regRows');tb.innerHTML='';
   $('visibleUserCount').textContent=rows.length;
-  rows.forEach(r=>{
-    const ownerUid=r.ownerUid || lastStudentUsers.find(u=>u.studentId===r.studentId)?.uid || '';
-    const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
-    const attempt=attemptForUserSubject(ownerUid,r.studentId,r.subjectId);
-    const used=Math.max(0,Math.min(2,Number(attempt?.attemptsUsed||0)));
-    const canUnlock=!!r.subjectId && !!ownerUid && used>=2;
 
+  rows.forEach(r=>{
+    const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td>${fmtDate(r.registeredAt||r.registeredAtClient)}</td>
+      <td>${fmtDate(r.latestAt)}</td>
       <td>${esc(subject)}</td>
-      <td>${esc(r.studentId)}</td>
+      <td><b>${esc(r.studentId)}</b></td>
       <td>${esc(r.name)}</td>
-      <td>${esc(r.className)}</td>
-      <td>${esc(r.department)}</td>
+      <td>${esc(r.classLevel||'-')}</td>
+      <td>${esc(r.classRoom||'-')}</td>
+      <td>${esc(r.department||'-')}</td>
+      <td>${esc(r.major||'-')}</td>
+      <td>${esc(r.majorCode||'-')}</td>
       <td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td>
-      <td>${r.subjectId?renderAttemptBadge(attempt):'<span class="muted">-</span>'}</td>
       <td>
         <div class="row user-manage-actions">
-          ${canUnlock?'<button class="btn ok small unlock-attempt">ปลดล็อกให้สอบใหม่</button>':''}
           <button class="btn danger small delete-user">ลบ User</button>
         </div>
       </td>`;
-
-    const unlockBtn=tr.querySelector('.unlock-attempt');
-    if(unlockBtn){
-      unlockBtn.onclick=()=>unlockExamAttemptsForUser(r,ownerUid);
-    }
     tr.querySelector('.delete-user').onclick=()=>deleteUserFromSystem(r);
     tb.appendChild(tr);
   });
@@ -548,6 +646,10 @@ async function deleteUserFromSystem(r){
   }
 }
 
+$('newStudentDept').addEventListener('change',()=>{
+  fillAdminMajorSelect($('newStudentDept').value);
+});
+$('newStudentMajor').addEventListener('change',updateAdminMajorCode);
 $('toggleAddUser').onclick=()=>$('addUserPanel').classList.toggle('hidden');
 $('cancelAddUser').onclick=()=>$('addUserPanel').classList.add('hidden');
 $('saveNewUser').onclick=async()=>{
@@ -555,11 +657,17 @@ $('saveNewUser').onclick=async()=>{
   const studentId=norm($('newStudentId').value),name=norm($('newStudentName').value);
   const classLevel=norm($('newStudentClassLevel').value),classRoom=norm($('newStudentClassRoom').value);
   const className=classLevel && classRoom ? `${classLevel}${classRoom}` : '';
-  const department=norm($('newStudentDept').value);
+  const departmentId=norm($('newStudentDept').value);
+  const departmentObj=departmentById(departmentId);
+  const majorId=norm($('newStudentMajor').value);
+  const majorObj=majorById(departmentId,majorId);
+  const department=departmentObj?.name||'';
+  const major=majorObj?.name||'';
+  const majorCode=majorObj?.code||'';
   const password=$('newStudentPassword').value;
   const subjectId=$('newStudentSubject').value,status=$('newStudentStatus').value;
-  if(!studentId||!name||!className||!department){
-    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ เลือกระดับชั้น และแผนกให้ครบ';$('addUserMsg').classList.remove('hidden');return;
+  if(!studentId||!name||!classLevel||!classRoom||!departmentId||!majorId||!department||!major){
+    $('addUserMsg').textContent='กรุณากรอกเลขนักศึกษา ชื่อ และเลือกระดับชั้น ห้อง แผนก และสาขาให้ครบ';$('addUserMsg').classList.remove('hidden');return;
   }
   if(!/^\d+$/.test(studentId)){
     $('addUserMsg').textContent='เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น';$('addUserMsg').classList.remove('hidden');return;
@@ -572,16 +680,20 @@ $('saveNewUser').onclick=async()=>{
   try{
     const cred=await createUserWithEmailAndPassword(provisionAuth,studentEmail(studentId),password);
     await setDoc(doc(db,'studentUsers',cred.user.uid),{
-      studentId,name,className,department,wantsKey:true,email:studentEmail(studentId),
+      studentId,name,classLevel,classRoom,className,
+      departmentId,department,majorId,major,majorCode,
+      wantsKey:true,email:studentEmail(studentId),
       active:true,createdByAdmin:true,createdAt:serverTimestamp(),createdAtClient:new Date().toISOString()
     });
     await setDoc(doc(db,'studentCheckins',`admin-${Date.now()}-${crypto.randomUUID()}`),{
-      ownerUid:cred.user.uid,studentId,name,className,department,status,
+      ownerUid:cred.user.uid,studentId,name,classLevel,classRoom,className,
+      departmentId,department,majorId,major,majorCode,status,
       subjectId:s?.id||'',subjectCode:s?.code||'',subjectName:s?.name||'',
       wantsKey:true,createdByAdmin:true,registeredAt:serverTimestamp(),registeredAtClient:new Date().toISOString()
     });
     await signOut(provisionAuth);
-    ['newStudentId','newStudentName','newStudentClassLevel','newStudentClassRoom','newStudentDept','newStudentPassword'].forEach(id=>$(id).value='');
+    ['newStudentId','newStudentName','newStudentClassLevel','newStudentClassRoom','newStudentDept','newStudentMajor','newStudentPassword'].forEach(id=>$(id).value='');
+    fillAdminMajorSelect('');
     $('newStudentSubject').value='';$('newStudentStatus').value='registered';$('addUserPanel').classList.add('hidden');
     alert(`สร้าง User ${studentId} สำเร็จ`);
   }catch(e){
@@ -725,14 +837,14 @@ function saveWorkbook(sheets,filename){
 function resultExportRows(){
   return filteredResults().map(s=>{const sc=scoreOf(s);return {
     'วันเวลา':fmtDate(s.submittedAt||s.submittedAtClient),'รหัสวิชา':s.subjectCode||'','รายวิชา':s.subjectName||'',
-    'เลขนักศึกษา':s.student?.studentId||'','ชื่อ-นามสกุล':s.student?.name||'','ชั้น/ห้อง':s.student?.className||'','แผนก':s.student?.department||'',
+    'เลขนักศึกษา':s.student?.studentId||'','ชื่อ-นามสกุล':s.student?.name||'','ระดับชั้น':userMeta(s).classLevel||'','ห้อง':userMeta(s).classRoom||'','แผนก':userMeta(s).department||'','สาขา':userMeta(s).major||'','รหัสสาขา':userMeta(s).majorCode||'',
     'สถานะ':s.status||'submitted','ถูก/50':sc.correct,'คะแนน/20':sc.score
   }});
 }
 function userExportRows(){
   return filteredRegs().map(r=>({
     'วันเวลา':fmtDate(r.registeredAt||r.registeredAtClient),'รหัสวิชา':r.subjectCode||'','รายวิชา':r.subjectName||'',
-    'เลขนักศึกษา':r.studentId||'','ชื่อ-นามสกุล':r.name||'','ชั้น/ห้อง':r.className||'','แผนก':r.department||'','สถานะ':statusLabel(r.status)
+    'เลขนักศึกษา':r.studentId||'','ชื่อ-นามสกุล':r.name||'','ระดับชั้น':r.classLevel||'','ห้อง':r.classRoom||'','แผนก':r.department||'','สาขา':r.major||'','รหัสสาขา':r.majorCode||'','สถานะ':statusLabel(r.status)
   }));
 }
 $('exportResultsExcel').onclick=()=>saveWorkbook({'ผลสอบ':resultExportRows()},`ผลสอบ-${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -771,12 +883,12 @@ $('deleteAllQuestions').onclick=async()=>{
   await deleteDocs([...q.docs,...a.docs]);bankEnsured=false;await renderAll();
 };
 
-['resultSubjectFilter','resultClassFilter'].forEach(id=>$(id).onchange=renderResults);
+['resultSubjectFilter','resultLevelFilter','resultRoomFilter','resultDeptFilter','resultMajorFilter'].forEach(id=>$(id).onchange=renderResults);
 $('resultSearch').oninput=renderResults;
 $('requestSearch').oninput=renderRequests;
 ['requestTypeFilter','requestStatusFilter'].forEach(id=>$(id).onchange=renderRequests);
 $('refreshRequestsAdmin').onclick=renderAll;
-['regSubjectFilter','regClassFilter','regStatusFilter'].forEach(id=>$(id).onchange=renderRegs);
+['regSubjectFilter','regLevelFilter','regRoomFilter','regDeptFilter','regMajorFilter','regStatusFilter'].forEach(id=>$(id).onchange=renderRegs);
 $('regSearch').oninput=renderRegs;
 $('questionSubjectFilter').onchange=renderQuestions;
 

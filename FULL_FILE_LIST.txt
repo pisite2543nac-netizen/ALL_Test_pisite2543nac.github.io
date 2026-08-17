@@ -1,0 +1,21 @@
+NANGRONG EXAM SYSTEM — STABLE CATEGORIZED V1
+Version: 20260817-STABLE-CATEGORIZED-V1
+Question bank: 550 questions / 11 subjects
+
+FILES
+.nojekyll | 0 bytes | sha256:e3b0c44298fc1c14
+admin.html | 24,324 bytes | sha256:92979f497945f60e
+admin.js | 43,434 bytes | sha256:65cb0c1d5cac1535
+answer-bank-30min.json | 1,035,136 bytes | sha256:36d536c9adb880ce
+data.js | 111 bytes | sha256:8f9a9678d99d033a
+firebase-config.js | 661 bytes | sha256:929e7d070dca565f
+firebase-service.js | 1,182 bytes | sha256:be7231c34f17c196
+firestore.rules | 4,660 bytes | sha256:0410212f93daef08
+index.html | 20,953 bytes | sha256:7c09062fca0a17f2
+initial-question-bank-all-subjects.json | 1,170,947 bytes | sha256:cc56e27cbb6f38f9
+QUESTION_BANK_MANIFEST.json | 3,954 bytes | sha256:b9f2604a22de9e19
+README-วางทับ-GitHub.txt | 2,540 bytes | sha256:af8518f20d91e448
+student-catalog.js | 2,010 bytes | sha256:41fb7fc85a4a4caf
+student.js | 50,996 bytes | sha256:a360a0657de3e291
+styles.css | 32,699 bytes | sha256:8d4b603a7e7066a3
+subjects.js | 3,010 bytes | sha256:9846cf52b846e5e6

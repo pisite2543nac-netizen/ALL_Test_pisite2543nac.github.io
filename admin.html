@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin Dashboard | วิทยาลัยเทคนิคนางรอง</title>
+  <title>Admin 20260817-STABLE-CATEGORIZED-V1 | วิทยาลัยเทคนิคนางรอง</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+<div class="notice emergency-live-banner"><b>EMERGENCY STABLE MODE</b> · ผลสอบจาก Student จะเข้า submissions และคำนวณคะแนนใน Admin</div>
 <main class="container admin-shell">
 
 <section id="loginCard" class="card login-card">
@@ -101,15 +102,18 @@
       <button id="exportResultsExcel" class="btn small">ส่งออก Excel</button>
     </div>
 
-    <div class="admin-filter-grid">
-      <div class="field"><label>ค้นหา</label><input id="resultSearch" placeholder="ชื่อ / เลขนักศึกษา / แผนก"></div>
+    <div class="admin-filter-grid admin-filter-grid-wide">
+      <div class="field"><label>ค้นหา</label><input id="resultSearch" placeholder="ชื่อ / เลขนักศึกษา / แผนก / สาขา"></div>
       <div class="field"><label>รายวิชา</label><select id="resultSubjectFilter"></select></div>
-      <div class="field"><label>ชั้น / ห้อง</label><select id="resultClassFilter"></select></div>
+      <div class="field"><label>ระดับชั้น</label><select id="resultLevelFilter"></select></div>
+      <div class="field"><label>ห้อง</label><select id="resultRoomFilter"></select></div>
+      <div class="field"><label>แผนกวิชา</label><select id="resultDeptFilter"></select></div>
+      <div class="field"><label>สาขาวิชา</label><select id="resultMajorFilter"></select></div>
     </div>
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead>
+        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ระดับ</th><th>ห้อง</th><th>แผนก</th><th>สาขา</th><th>สถานะ</th><th>ถูก/50</th><th>คะแนน/20</th><th>จัดการ</th></tr></thead>
         <tbody id="resultRows"></tbody>
       </table>
     </div>
@@ -201,7 +205,13 @@
             <option value="/6">/6</option>
           </select>
         </div>
-        <div class="field"><label>แผนกวิชา</label><input id="newStudentDept"></div>
+        <div class="field"><label>แผนกวิชา</label>
+          <select id="newStudentDept"><option value="">-- เลือกแผนก --</option></select>
+        </div>
+        <div class="field"><label>สาขาวิชา</label>
+          <select id="newStudentMajor" disabled><option value="">-- เลือกสาขาวิชา --</option></select>
+          <small>รหัสสาขา: <b id="newStudentMajorCode">-</b></small>
+        </div>
         <div class="field"><label>รหัสผ่านเริ่มต้นของ User</label><input id="newStudentPassword" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
         <div class="field"><label>กำหนดรายวิชา (ไม่บังคับ)</label><select id="newStudentSubject"></select></div>
         <div class="field"><label>สถานะ</label>
@@ -219,10 +229,13 @@
       </div>
     </div>
 
-    <div class="admin-filter-grid">
-      <div class="field"><label>ค้นหาเร็ว</label><input id="regSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้น / แผนก"></div>
+    <div class="admin-filter-grid admin-filter-grid-wide">
+      <div class="field"><label>ค้นหาเร็ว</label><input id="regSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้น / ห้อง / แผนก / สาขา"></div>
       <div class="field"><label>รายวิชา</label><select id="regSubjectFilter"></select></div>
-      <div class="field"><label>ชั้น / ห้อง</label><select id="regClassFilter"></select></div>
+      <div class="field"><label>ระดับชั้น</label><select id="regLevelFilter"></select></div>
+      <div class="field"><label>ห้อง</label><select id="regRoomFilter"></select></div>
+      <div class="field"><label>แผนกวิชา</label><select id="regDeptFilter"></select></div>
+      <div class="field"><label>สาขาวิชา</label><select id="regMajorFilter"></select></div>
       <div class="field"><label>สถานะ</label>
         <select id="regStatusFilter">
           <option value="">ทุกสถานะ</option>
@@ -238,10 +251,8 @@
       <span class="muted">รายการที่แสดง</span><b id="visibleUserCount">0</b>
     </div>
 
-    <div class="notice compact-note admin-attempt-notice">
-      <b>การจัดการสิทธิ์สอบ:</b> แต่ละ User มีสิทธิ์สอบวิชาละ 2 ครั้ง เมื่อใช้ครบ 2/2 ระบบจะขึ้น “หมดสิทธิ์”
-      และ Admin สามารถกด <b>“ปลดล็อกให้สอบใหม่”</b> เพื่อรีเซ็ตเฉพาะ User + วิชานั้นกลับเป็น 0/2 ครั้ง
-      โดยคะแนนและประวัติสอบเดิมยังคงอยู่
+    <div class="notice compact-note admin-category-notice">
+      <b>ระบบจัดหมวดหมู่ User:</b> รายการผู้ใช้จะแสดง 1 บัญชีต่อ 1 แถว และกรองได้แยกตามระดับชั้น ห้อง แผนก และสาขาวิชา
     </div>
 
     <div class="notice compact-note">
@@ -251,7 +262,7 @@
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>วันเวลา</th><th>วิชา</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้อง</th><th>แผนก</th><th>สถานะ</th><th>สิทธิ์สอบ</th><th>จัดการ</th></tr></thead>
+        <thead><tr><th>ล่าสุด</th><th>วิชาล่าสุด</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ระดับ</th><th>ห้อง</th><th>แผนก</th><th>สาขา</th><th>รหัส</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
         <tbody id="regRows"></tbody>
       </table>
     </div>
@@ -371,7 +382,7 @@
 </section>
 
 </main>
-<script type="module" src="admin.js?v=20260817-EXAMFIX-V5"></script>
-<div id="systemVersionBadge" class="system-version-badge">Admin 20260817-EXAMFIX-V5</div>
+<script type="module" src="admin.js?v=20260817-STABLE-CATEGORIZED-V1"></script>
+<div id="systemVersionBadge" class="system-version-badge">Admin 20260817-STABLE-CATEGORIZED-V1</div>
 </body>
 </html>

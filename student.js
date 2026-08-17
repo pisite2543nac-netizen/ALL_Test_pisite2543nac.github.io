@@ -1,6 +1,8 @@
+// SYSTEM VERSION: 20260817-STABLE-CATEGORIZED-V1
 import { studentAuth, studentDb, isFirebaseConfigured } from './firebase-service.js';
 import { ADMIN_UID } from './firebase-config.js';
 import { SUBJECTS } from './subjects.js';
+import { DEPARTMENTS, departmentById, majorById, normalizedStudentMeta } from './student-catalog.js';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -28,9 +30,46 @@ function randomToken(){return crypto.randomUUID?.() || `${Date.now()}-${Math.ran
 async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function applyTheme(theme){document.body.dataset.theme=theme||''}
 function studentEmail(studentId){return `${studentId}@student.nangrong.invalid`}
-function validStudentId(v){return /^\d+$/.test(v)}
+function validStudentId(v){return /^\d{1,15}$/.test(v)}
 function showMsg(id,msg){const e=$(id);e.textContent=msg;e.classList.remove('hidden')}
 function hideMsg(id){$(id)?.classList.add('hidden')}
+
+
+function fillDepartmentSelect(){
+  const el=$('department');
+  if(!el)return;
+  el.innerHTML='<option value="">-- เลือกแผนก --</option>';
+  DEPARTMENTS.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.id;
+    o.textContent=d.name;
+    el.appendChild(o);
+  });
+}
+function fillMajorSelect(departmentId,selected=''){
+  const el=$('major');
+  if(!el)return;
+  const d=departmentById(departmentId);
+  el.innerHTML='<option value="">-- เลือกสาขาวิชา --</option>';
+  if(!d){
+    el.disabled=true;
+    $('majorCodeText').textContent='-';
+    return;
+  }
+  d.majors.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id;
+    o.textContent=`${m.name} (${m.code})`;
+    el.appendChild(o);
+  });
+  el.disabled=false;
+  if(selected)el.value=selected;
+  updateMajorCode();
+}
+function updateMajorCode(){
+  const m=majorById($('department')?.value,$('major')?.value);
+  if($('majorCodeText'))$('majorCodeText').textContent=m?.code||'-';
+}
 
 function showLogin(){
   $('loginPanel').classList.remove('hidden');
@@ -52,7 +91,7 @@ function showAuthHome(){
 }
 async function showSubjectHome(){
   if(!student){showAuthHome();return}
-  await loadAttemptStates();
+  attemptStateMap=new Map();
   startMyRequestListener();
   renderMyRequests();
   $('screen-auth').classList.add('hidden');
@@ -63,8 +102,9 @@ async function showSubjectHome(){
   $('studentSummary').innerHTML=`
     <b>${escapeHtml(student.name)}</b>
     <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
-    <span>${escapeHtml(student.className)}</span>
-    <span>${escapeHtml(student.department)}</span>
+    <span>${escapeHtml(student.classLevel||'')} ${escapeHtml(student.classRoom||'')}</span>
+    <span>${escapeHtml(student.department||'-')}</span>
+    <span>${escapeHtml(student.major||'-')}${student.majorCode?` (${escapeHtml(student.majorCode)})`:''}</span>
     <span>${wantsKey?'รับเฉลยหลัง 30 นาที':'ไม่รับเฉลย'}</span>
   `;
   renderSubjects();
@@ -86,8 +126,14 @@ async function createStudentCheckin(uid, createdBy='student'){
     ownerUid:uid,
     studentId:student.studentId,
     name:student.name,
+    classLevel:student.classLevel||'',
+    classRoom:student.classRoom||'',
     className:student.className,
+    departmentId:student.departmentId||'',
     department:student.department,
+    majorId:student.majorId||'',
+    major:student.major||'',
+    majorCode:student.majorCode||'',
     wantsKey,
     status:'registered',
     subjectId:'',
@@ -121,16 +167,22 @@ async function registerUser(){
   const classLevel=normalize($('classLevel').value);
   const classRoom=normalize($('classRoom').value);
   const className=classLevel && classRoom ? `${classLevel}${classRoom}` : '';
-  const department=normalize($('department').value);
+  const departmentId=normalize($('department').value);
+  const departmentObj=departmentById(departmentId);
+  const majorId=normalize($('major').value);
+  const majorObj=majorById(departmentId,majorId);
+  const department=departmentObj?.name||'';
+  const major=majorObj?.name||'';
+  const majorCode=majorObj?.code||'';
   const password=$('registerPassword').value;
   const password2=$('registerPassword2').value;
   wantsKey=(document.querySelector('input[name="wantKey"]:checked')?.value||'yes')==='yes';
 
-  if(!studentId||!name||!className||!department){
-    showMsg('registerMsg','กรุณากรอกข้อมูลผู้เข้าสอบและเลือกระดับชั้นให้ครบถ้วน');return
+  if(!studentId||!name||!classLevel||!classRoom||!departmentId||!majorId||!department||!major){
+    showMsg('registerMsg','กรุณากรอกชื่อ เลขนักศึกษา และเลือกระดับชั้น ห้อง แผนก และสาขาวิชาให้ครบถ้วน');return
   }
   if(!validStudentId(studentId)){
-    showMsg('registerMsg','เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น');return
+    showMsg('registerMsg','เลขนักศึกษาต้องเป็นตัวเลขเท่านั้น และมีความยาวไม่เกิน 15 หลัก');return
   }
   if(password.length<6){
     showMsg('registerMsg','รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');return
@@ -147,9 +199,14 @@ async function registerUser(){
     await setPersistence(studentAuth,browserLocalPersistence);
     const cred=await createUserWithEmailAndPassword(studentAuth,studentEmail(studentId),password);
 
-    student={studentId,name,className,department,wantsKey,uid:cred.user.uid};
+    student={
+      studentId,name,classLevel,classRoom,className,
+      departmentId,department,majorId,major,majorCode,
+      wantsKey,uid:cred.user.uid
+    };
     await setDoc(doc(studentDb,'studentUsers',cred.user.uid),{
-      studentId,name,className,department,wantsKey,
+      studentId,name,classLevel,classRoom,className,
+      departmentId,department,majorId,major,majorCode,wantsKey,
       email:studentEmail(studentId),
       active:true,
       createdAt:serverTimestamp(),
@@ -199,12 +256,12 @@ async function loadLoggedInStudent(user){
   if(!snap.exists())throw new Error('ไม่พบข้อมูลผู้เข้าสอบ');
   const p=snap.data();
   if(p.active===false)throw new Error('บัญชีถูกระงับ');
+  const meta=normalizedStudentMeta(p);
   student={
     uid:user.uid,
     studentId:p.studentId||'',
     name:p.name||'',
-    className:p.className||'',
-    department:p.department||'',
+    ...meta,
     wantsKey:p.wantsKey!==false
   };
   wantsKey=student.wantsKey;
@@ -217,7 +274,7 @@ async function logoutUser(){
   clearInterval(timer);clearInterval(revealTimer);
   if(requestUnsub){try{requestUnsub()}catch{} requestUnsub=null}
   myRequests=[];lastSubmissionContext=null;
-  active=false;student=null;selectedSubject=null;checkinId='';registrationId='';attemptToken='';currentAttemptNumber=0;attemptStateMap=new Map();
+  active=false;student=null;selectedSubject=null;checkinId='';registrationId='';attemptToken='';currentAttemptNumber=0;
   try{await signOut(studentAuth)}catch{}
   $('pendingRevealShortcut')?.classList.add('hidden');
   showLogin();
@@ -306,8 +363,14 @@ async function createExamRequest(type){
       ownerUid:studentAuth.currentUser.uid,
       studentId:student.studentId,
       studentName:student.name,
+      classLevel:student.classLevel||'',
+      classRoom:student.classRoom||'',
       className:student.className,
+      departmentId:student.departmentId||'',
       department:student.department,
+      majorId:student.majorId||'',
+      major:student.major||'',
+      majorCode:student.majorCode||'',
       subjectId:lastSubmissionContext.subjectId,
       subjectCode:lastSubmissionContext.subjectCode,
       subjectName:lastSubmissionContext.subjectName,
@@ -325,204 +388,12 @@ async function createExamRequest(type){
   }
 }
 
-function attemptDocId(subjectId){
-  const uid=studentAuth.currentUser?.uid||'';
-  return `${uid}__${subjectId}`;
-}
-
-function attemptInfo(subjectId){
-  return attemptStateMap.get(subjectId) || {attemptsUsed:0,terminatedCount:0};
-}
-
-async function loadAttemptStates(){
-  attemptStateMap=new Map();
-  const uid=studentAuth.currentUser?.uid;
-  if(!uid||!student)return;
-
-  const rows=await Promise.all(SUBJECTS.map(async s=>{
-    try{
-      const snap=await getDoc(doc(studentDb,'examAttempts',`${uid}__${s.id}`));
-      const data=snap.exists()?snap.data():{};
-      return [s.id,{
-        attemptsUsed:Number(data.attemptsUsed||0),
-        terminatedCount:Number(data.terminatedCount||0)
-      }];
-    }catch(e){
-      console.warn('attempt state read failed',s.id,e);
-      return [s.id,{attemptsUsed:0,terminatedCount:0}];
-    }
-  }));
-  attemptStateMap=new Map(rows);
-}
-
-async function createAttemptAndRegistration(subject){
-  const uid=studentAuth.currentUser?.uid;
-  if(!uid)throw new Error('ไม่พบข้อมูลบัญชีผู้เข้าสอบ');
-
-  // IMPORTANT:
-  // สร้าง Registration ID ใหม่ทุกครั้งที่เริ่มสอบ
-  // ไม่เขียนทับ Registration ของรอบก่อน
-  const attemptRef=doc(studentDb,'examAttempts',`${uid}__${subject.id}`);
-  const regRef=doc(collection(studentDb,'registrations'));
-  const regId=regRef.id;
-  const newAttemptToken=randomToken();
-
-  const result=await runTransaction(studentDb,async tx=>{
-    const attemptSnap=await tx.get(attemptRef);
-    const old=attemptSnap.exists()?attemptSnap.data():{};
-    const used=Number(old.attemptsUsed||0);
-    const terminated=Number(old.terminatedCount||0);
-
-    if(used>=MAX_ATTEMPTS_PER_SUBJECT){
-      const err=new Error('⛔ ยุติสิทธิ์การสอบรายวิชานี้ทันที เนื่องจากใช้สิทธิ์ครบ 2 ครั้ง กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่');
-      err.code='attempt-limit';
-      throw err;
-    }
-
-    const next=used+1;
-
-    const attemptData={
-      ownerUid:uid,
-      studentId:student.studentId,
-      subjectId:subject.id,
-      subjectCode:subject.code,
-      subjectName:subject.name,
-      attemptsUsed:next,
-      terminatedCount:terminated,
-      maxAttempts:MAX_ATTEMPTS_PER_SUBJECT,
-      updatedAt:serverTimestamp(),
-      updatedAtClient:new Date().toISOString()
-    };
-
-    if(!attemptSnap.exists()){
-      attemptData.createdAt=serverTimestamp();
-      attemptData.createdAtClient=new Date().toISOString();
-    }
-
-    const registrationData={
-      ownerUid:uid,
-      studentId:student.studentId,
-      name:student.name,
-      className:student.className,
-      department:student.department,
-      subjectId:subject.id,
-      subjectCode:subject.code,
-      subjectName:subject.name,
-      attemptToken:newAttemptToken,
-      attemptNumber:next,
-      maxAttempts:MAX_ATTEMPTS_PER_SUBJECT,
-      registeredAt:serverTimestamp(),
-      registeredAtClient:new Date().toISOString(),
-      status:'started',
-      wantsKey:!!wantsKey
-    };
-
-    // Atomic: ถ้ารายการใดรายการหนึ่งไม่ผ่าน Rules
-    // ทั้ง attempt และ registration จะไม่ถูกเขียน
-    tx.set(attemptRef,attemptData,{merge:true});
-    tx.set(regRef,registrationData);
-
-    return {
-      registrationId:regId,
-      attemptToken:newAttemptToken,
-      attemptsUsed:next,
-      terminatedCount:terminated
-    };
-  });
-
-  attemptToken=result.attemptToken;
-  attemptStateMap.set(subject.id,{
-    attemptsUsed:result.attemptsUsed,
-    terminatedCount:result.terminatedCount
-  });
-  return result;
-}
-
-async function reserveAttempt(subject){
-  const uid=studentAuth.currentUser?.uid;
-  if(!uid)throw new Error('ไม่พบข้อมูลบัญชีผู้เข้าสอบ');
-
-  const ref=doc(studentDb,'examAttempts',`${uid}__${subject.id}`);
-
-  const result=await runTransaction(studentDb,async tx=>{
-    const snap=await tx.get(ref);
-    const old=snap.exists()?snap.data():{};
-    const used=Number(old.attemptsUsed||0);
-    const terminated=Number(old.terminatedCount||0);
-
-    if(used>=MAX_ATTEMPTS_PER_SUBJECT){
-      const err=new Error('⛔ ยุติสิทธิ์การสอบรายวิชานี้ทันที เนื่องจากใช้สิทธิ์ครบ 2 ครั้ง กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่');
-      err.code='attempt-limit';
-      throw err;
-    }
-
-    const next=used+1;
-    const data={
-      ownerUid:uid,
-      studentId:student.studentId,
-      subjectId:subject.id,
-      subjectCode:subject.code,
-      subjectName:subject.name,
-      attemptsUsed:next,
-      terminatedCount:terminated,
-      maxAttempts:MAX_ATTEMPTS_PER_SUBJECT,
-      updatedAt:serverTimestamp(),
-      updatedAtClient:new Date().toISOString()
-    };
-
-    if(!snap.exists()){
-      data.createdAt=serverTimestamp();
-      data.createdAtClient=new Date().toISOString();
-    }
-
-    tx.set(ref,data,{merge:true});
-    return {attemptsUsed:next,terminatedCount:terminated};
-  });
-
-  attemptStateMap.set(subject.id,result);
-  return result.attemptsUsed;
-}
-
-async function markTerminatedAttempt(){
-  const uid=studentAuth.currentUser?.uid;
-  if(!uid||!selectedSubject)return;
-  const ref=doc(studentDb,'examAttempts',`${uid}__${selectedSubject.id}`);
-
-  try{
-    const result=await runTransaction(studentDb,async tx=>{
-      const snap=await tx.get(ref);
-      if(!snap.exists())return null;
-      const d=snap.data();
-      const used=Number(d.attemptsUsed||0);
-      const terminated=Number(d.terminatedCount||0);
-      const next=Math.min(used,terminated+1);
-      tx.set(ref,{
-        terminatedCount:next,
-        lastTerminatedAt:serverTimestamp(),
-        lastTerminatedAtClient:new Date().toISOString(),
-        updatedAt:serverTimestamp(),
-        updatedAtClient:new Date().toISOString()
-      },{merge:true});
-      return {attemptsUsed:used,terminatedCount:next};
-    });
-    if(result)attemptStateMap.set(selectedSubject.id,result);
-  }catch(e){
-    console.warn('mark terminated attempt failed',e);
-  }
-}
-
 function renderSubjects(){
   const g=$('subjectGrid');
   g.innerHTML='';
   SUBJECTS.forEach(s=>{
-    const info=attemptInfo(s.id);
-    const used=Math.min(MAX_ATTEMPTS_PER_SUBJECT,Number(info.attemptsUsed||0));
-    const left=Math.max(0,MAX_ATTEMPTS_PER_SUBJECT-used);
-    const terminated=Number(info.terminatedCount||0);
-    const locked=used>=MAX_ATTEMPTS_PER_SUBJECT;
-
     const card=document.createElement('div');
-    card.className=`subject-card theme-${s.theme}${locked?' attempt-locked':''}`;
+    card.className=`subject-card theme-${s.theme}`;
     card.innerHTML=`
       <div class="subject-head">
         <span class="subject-icon">${s.icon}</span>
@@ -531,12 +402,9 @@ function renderSubjects(){
       <strong>${escapeHtml(s.name)}</strong>
       <span class="subject-meta">ข้อสอบ 50 ข้อ · คะแนนเต็ม 20 · เวลา 75 นาที</span>
 
-      <div class="attempt-status ${locked?'locked':'available'}">
-        <b>${locked?'⛔ หมดสิทธิ์สอบวิชานี้':'⚠️ สิทธิ์การสอบรายวิชานี้'}</b>
-        <span>${locked
-          ? `ยุติสิทธิ์การสอบรายวิชานี้ทันที เนื่องจากใช้สิทธิ์ครบ ${MAX_ATTEMPTS_PER_SUBJECT}/${MAX_ATTEMPTS_PER_SUBJECT} ครั้งแล้ว · กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่`
-          : `ใช้ไปแล้ว ${used}/${MAX_ATTEMPTS_PER_SUBJECT} ครั้ง · เหลือ ${left} ครั้ง${terminated?` · ถูกยุติการสอบ ${terminated} ครั้ง`:''}`
-        }</span>
+      <div class="stable-ready-note">
+        <b>✅ พร้อมเข้าสอบ</b>
+        <span>กรอก Code ของรายวิชา แล้วอ่านคำชี้แจงก่อนเริ่มสอบ</span>
       </div>
 
       <div class="subject-code-gate">
@@ -549,31 +417,26 @@ function renderSubjects(){
             spellcheck="false"
             autocapitalize="characters"
             maxlength="20"
-            placeholder="${locked?'หมดสิทธิ์สอบแล้ว':'กรอกรหัสล็อกอิน'}"
-            ${locked?'disabled':''}
+            placeholder="กรอกรหัสล็อกอิน"
           >
-          <button class="btn small subject-start" type="button" data-subject="${s.id}" ${locked?'disabled':''}>
-            ${locked?'หมดสิทธิ์สอบ':'ล็อกอินเข้าสอบ'}
+          <button class="btn small subject-start" type="button" data-subject="${s.id}">
+            ล็อกอินเข้าสอบ
           </button>
         </div>
-        <div id="subject-msg-${s.id}" class="subject-code-msg ${locked?'bad':'hidden'}">
-          ${locked?'⛔ ยุติสิทธิ์การสอบทันที: คุณใช้สิทธิ์ครบ 2 ครั้งแล้ว กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่':''}
-        </div>
+        <div id="subject-msg-${s.id}" class="subject-code-msg hidden"></div>
       </div>
     `;
     g.appendChild(card);
 
     const input=card.querySelector(`#subject-code-${CSS.escape(s.id)}`);
     const btn=card.querySelector('.subject-start');
-    if(!locked){
-      btn.addEventListener('click',()=>unlockAndStart(s));
-      input.addEventListener('keydown',e=>{
-        if(e.key==='Enter'){
-          e.preventDefault();
-          unlockAndStart(s);
-        }
-      });
-    }
+    btn.addEventListener('click',()=>unlockAndStart(s));
+    input.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        unlockAndStart(s);
+      }
+    });
   });
 }
 
@@ -651,12 +514,6 @@ async function unlockAndStart(s){
     return;
   }
 
-  const info=attemptInfo(s.id);
-  if(Number(info.attemptsUsed||0)>=MAX_ATTEMPTS_PER_SUBJECT){
-    subjectMessage(s,'⛔ ยุติสิทธิ์การสอบรายวิชานี้ทันที เนื่องจากใช้สิทธิ์ครบ 2 ครั้ง กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่');
-    return;
-  }
-
   const input=$(`subject-code-${s.id}`);
   const value=normalize(input.value).toUpperCase();
 
@@ -709,21 +566,17 @@ function showPreExamInstructions(){
   $('instructionStudent').innerHTML=`
     <b>${escapeHtml(student.name)}</b>
     <span>เลขนักศึกษา ${escapeHtml(student.studentId)}</span>
-    <span>${escapeHtml(student.className)}</span>
-    <span>${escapeHtml(student.department)}</span>
+    <span>${escapeHtml(student.classLevel||'')} ${escapeHtml(student.classRoom||'')}</span>
+    <span>${escapeHtml(student.department||'-')}</span>
+    <span>${escapeHtml(student.major||'-')}${student.majorCode?` (${escapeHtml(student.majorCode)})`:''}</span>
   `;
 
-  const attemptInfoNow=attemptInfo(selectedSubject.id);
-  const used=Number(attemptInfoNow.attemptsUsed||0);
-  const willBeAttempt=used+1;
-  const afterStartLeft=Math.max(0,MAX_ATTEMPTS_PER_SUBJECT-willBeAttempt);
-
   $('instructionRevealInfo').innerHTML=`
-    <div class="critical-attempt-warning">
-      <b>🚨 คำเตือนเรื่องสิทธิ์สอบ</b>
-      <div>รายวิชานี้สอบได้สูงสุด <strong>2 ครั้งต่อ User</strong></div>
-      <div>ถ้ากด “เริ่มทำข้อสอบ” ครั้งนี้ จะเป็น <strong>ครั้งที่ ${willBeAttempt}/2</strong> และจะเหลือสิทธิ์อีก <strong>${afterStartLeft} ครั้ง</strong></div>
-      <div><strong>การสอบที่ถูกยุติจากการทำผิดกติกาจะนับเป็น 1 ครั้งด้วย</strong> หากใช้ครบ 2 ครั้ง ระบบจะปิดสิทธิ์เข้าสอบวิชานี้ทันที</div>
+    <div class="critical-attempt-warning emergency-mode">
+      <b>✅ ระบบสอบ Stable Core พร้อมใช้งาน</b>
+      <div>เมื่อกด “เริ่มทำข้อสอบ” ระบบจะเข้าสู่ Fullscreen และเริ่มนับเวลา 75 นาทีทันที</div>
+      <div><strong>การเริ่มสอบไม่พึ่ง examAttempts หรือ registrations จึงไม่ถูก Rules สองส่วนนี้ขวาง</strong></div>
+      <div>เมื่อส่งข้อสอบ คำตอบจะถูกบันทึกลง <strong>submissions</strong> โดยตรง และ Admin จะเห็นคะแนนจากหน้า Dashboard</div>
     </div>
     <div class="reveal-note">
       ${wantsKey
@@ -762,36 +615,34 @@ async function beginExamFromInstructions(){
   $('instructionStartBtn').disabled=true;
   $('instructionBackBtn').disabled=true;
 
+  // IMPORTANT:
+  // Fullscreen must be requested immediately from the user's click.
+  // No Firestore/network await is allowed before this call.
   try{
-    // นับสิทธิ์ + สร้าง Registration ใน Transaction เดียว
-    // ถ้าขั้นใดไม่สำเร็จ จะไม่หักสิทธิ์สอบ
-    const startResult=await createAttemptAndRegistration(selectedSubject);
-    currentAttemptNumber=startResult.attemptsUsed;
-    registrationId=startResult.registrationId;
-    await updateStudentCheckinForSubject();
+    await document.documentElement.requestFullscreen();
   }catch(e){
-    console.error(e);
+    console.error('fullscreen rejected',e);
     startingExam=false;
     $('instructionStartBtn').disabled=false;
     $('instructionBackBtn').disabled=false;
-    if(e?.code==='attempt-limit'){
-      showMsg('instructionMsg','⛔ ยุติสิทธิ์การสอบทันที: คุณใช้สิทธิ์ครบ 2 ครั้งแล้ว กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่');
-      await loadAttemptStates();
-      return;
-    }
-    if(e?.code==='permission-denied'){
-      showMsg('instructionMsg','[20260817-EXAMFIX-V5] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ กรุณา Publish Rules EXAM START FIX V5 DOCID');
-      return;
-    }
-    showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');
+    showMsg(
+      'instructionMsg',
+      'ไม่สามารถเข้าสู่ Fullscreen ได้ กรุณาอนุญาต Fullscreen ใน Browser แล้วกด “เริ่มทำข้อสอบ” อีกครั้ง'
+    );
     return;
   }
+
+  // Stable Core: no examAttempts / registrations dependency.
+  currentAttemptNumber=1;
+  attemptToken=randomToken();
+  registrationId=`stable_${studentAuth.currentUser?.uid||student.studentId}_${selectedSubject.id}_${Date.now()}`;
 
   startedAt=new Date().toISOString();
   answers=new Array(EXAM_COUNT).fill(-1);
   timeLeft=EXAM_SECONDS;
   current=0;
   violations=0;
+  lastViolationAt=0;
   $('violations').textContent='0';
 
   $('screen-instructions').classList.add('hidden');
@@ -803,20 +654,12 @@ async function beginExamFromInstructions(){
   active=true;
   startingExam=false;
   $('instructionBackBtn').disabled=false;
-
-  try{
-    await document.documentElement.requestFullscreen?.();
-  }catch(e){
-    active=false;
-    clearInterval(timer);
-    showMsg('instructionMsg','ไม่สามารถเข้าสู่ Fullscreen ได้ กรุณาอนุญาต Fullscreen แล้วกดเริ่มทำข้อสอบอีกครั้ง');
-    $('screen-exam').classList.add('hidden');
-    $('screen-instructions').classList.remove('hidden');
-    $('instructionStartBtn').disabled=false;
-    return;
-  }
   render();
   startTimer();
+
+  // Best-effort tracking only. Failure here must NEVER stop the exam.
+  updateStudentCheckinForSubject()
+    .catch(e=>console.warn('checkin update skipped; exam continues',e));
 }
 
 function buildWatermark(){
@@ -1173,9 +1016,7 @@ async function finish(status='submitted'){
       status
     };
 
-    if(status==='terminated'){
-      await markTerminatedAttempt();
-    }
+    // Emergency mode: ไม่เขียน examAttempts
 
     if(checkinId){
       try{
@@ -1219,13 +1060,9 @@ async function finish(status='submitted'){
     $('revealWaiting').classList.add('hidden');
     $('reviewSection').classList.add('hidden');
     if(status==='terminated'){
-      const used=Math.min(MAX_ATTEMPTS_PER_SUBJECT,currentAttemptNumber||0);
-      const left=Math.max(0,MAX_ATTEMPTS_PER_SUBJECT-used);
-      $('doneKeyText').innerHTML = left>0
-        ? `<strong class="danger-text">🚨 การสอบรอบนี้ถูกยุติ และถูกนับเป็นสิทธิ์สอบ 1 ครั้ง</strong><br>คุณใช้สิทธิ์วิชานี้ไปแล้ว ${used}/2 ครั้ง · เหลืออีก ${left} ครั้ง · รอบที่ถูกยุติจะไม่ได้รับเฉลย`
-        : `<strong class="danger-text">⛔ การสอบรอบนี้ถูกยุติ และคุณใช้สิทธิ์ครบ 2/2 ครั้งแล้ว</strong><br>ยุติสิทธิ์การสอบรายวิชานี้ทันที ระบบล็อกปุ่มเข้าสอบแล้ว กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่`;
+      $('doneKeyText').innerHTML='<strong class="danger-text">🚨 การสอบรอบนี้ถูกยุติจากพฤติกรรมต้องสงสัย</strong><br>รอบที่ถูกยุติจะไม่ได้รับเฉลย กรุณาติดต่อ Admin หากต้องการสอบใหม่';
     }else if(status==='forfeited'){
-      $('doneKeyText').innerHTML='<strong class="danger-text">คุณยืนยันสละสิทธิ์สอบกลางคันแล้ว</strong><br>รอบนี้ถูกนับเป็นการใช้สิทธิ์สอบ 1 ครั้ง และไม่มีเฉลยสำหรับรอบที่สละสิทธิ์';
+      $('doneKeyText').innerHTML='<strong class="danger-text">คุณยืนยันสละสิทธิ์สอบกลางคันแล้ว</strong><br>การสอบรอบนี้สิ้นสุดและไม่มีเฉลย กรุณาติดต่อ Admin หากต้องการสอบใหม่';
     }else{
       $('doneKeyText').textContent='คุณเลือกไม่รับเฉลย ระบบจะไม่แสดงคะแนนหรือเฉลยในหน้าผู้เข้าสอบ';
     }
@@ -1266,6 +1103,11 @@ updatePendingRevealShortcut();
 // ---------- UI bindings ----------
 $('showLoginBtn').onclick=showLogin;
 $('showRegisterBtn').onclick=showRegister;
+fillDepartmentSelect();
+$('department').addEventListener('change',()=>{
+  fillMajorSelect($('department').value);
+});
+$('major').addEventListener('change',updateMajorCode);
 $('registerContinueBtn').onclick=registerUser;
 $('studentLoginBtn').onclick=loginUser;
 $('studentLogoutTopBtn').onclick=logoutUser;

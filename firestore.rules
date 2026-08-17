@@ -3,13 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin() {
-      return request.auth != null
-        && request.auth.uid == "otCHJNeKfgbohIs1lVn7O7RD5m73";
-    }
-
     function signedIn() {
       return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.uid == "otCHJNeKfgbohIs1lVn7O7RD5m73";
     }
 
     function isOwner(uid) {
@@ -17,7 +17,9 @@ service cloud.firestore {
     }
 
     // =====================================================
-    // STUDENT USER PROFILE
+    // STUDENT USERS
+    // New users store separate class/room/department/major fields.
+    // Old profiles remain readable for backward compatibility.
     // =====================================================
     match /studentUsers/{uid} {
       allow create: if isOwner(uid)
@@ -27,8 +29,6 @@ service cloud.firestore {
         && request.resource.data.department is string;
 
       allow read: if isOwner(uid) || isAdmin();
-
-      // Student can maintain own profile; Admin can manage all users.
       allow update: if isOwner(uid) || isAdmin();
       allow delete: if isAdmin();
     }
@@ -50,228 +50,81 @@ service cloud.firestore {
 
     // =====================================================
     // STUDENT CHECK-INS
+    // Best-effort tracking; never required to start exam.
     // =====================================================
     match /studentCheckins/{checkinId} {
-      function validCheckin() {
-        return request.resource.data.studentId is string
-          && request.resource.data.name is string
-          && request.resource.data.className is string
-          && request.resource.data.department is string
-          && request.resource.data.status is string;
-      }
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+        );
 
-      allow create: if
-        (
-          isAdmin()
-          || (
-            signedIn()
-            && request.resource.data.ownerUid == request.auth.uid
-          )
-          // backward compatibility for old anonymous records
-          || request.auth == null
-        )
-        && validCheckin();
-
-      allow update: if
-        isAdmin()
+      allow update: if isAdmin()
         || (
           signedIn()
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
-          && validCheckin()
-        )
-        || (
-          request.auth == null
-          && validCheckin()
-          && resource.data.studentId == request.resource.data.studentId
-          && resource.data.name == request.resource.data.name
         );
 
       allow read, delete: if isAdmin();
     }
 
     // =====================================================
-    // EXAM ATTEMPT LIMIT
-    // 1 User x 1 Subject = maximum 2 attempts
-    //
-    // IMPORTANT V5:
-    // สิทธิ์เจ้าของยึดจาก Document ID:
-    // {request.auth.uid}__{subjectId}
-    // จึงไม่ติด ownerUid เก่าที่อยู่ใน document รุ่นก่อน
-    // =====================================================
-    match /examAttempts/{attemptId} {
-
-      function attemptDocBelongsToCurrentUser() {
-        return signedIn()
-          && attemptId.matches('^' + request.auth.uid + '__.+$');
-      }
-
-      function validAttemptShape() {
-        return request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.studentId is string
-          && request.resource.data.subjectId is string
-          && attemptId == request.auth.uid + "__" + request.resource.data.subjectId
-          && request.resource.data.maxAttempts == 2
-          && request.resource.data.attemptsUsed is int
-          && request.resource.data.attemptsUsed >= 0
-          && request.resource.data.attemptsUsed <= 2
-          && request.resource.data.terminatedCount is int
-          && request.resource.data.terminatedCount >= 0
-          && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed;
-      }
-
-      function oldAttemptsUsed() {
-        return ("attemptsUsed" in resource.data)
-          ? resource.data.attemptsUsed
-          : 0;
-      }
-
-      function oldTerminatedCount() {
-        return ("terminatedCount" in resource.data)
-          ? resource.data.terminatedCount
-          : 0;
-      }
-
-      allow create: if isAdmin()
-        || (
-          attemptDocBelongsToCurrentUser()
-          && validAttemptShape()
-          && request.resource.data.attemptsUsed == 1
-          && request.resource.data.terminatedCount == 0
-        );
-
-      // รองรับ migration document เก่าทุกแบบ
-      // ไม่สน ownerUid เดิมใน resource หาก Document ID เป็นของ User คนนี้
-      allow update: if isAdmin()
-        || (
-          attemptDocBelongsToCurrentUser()
-          && validAttemptShape()
-          && (
-            // เริ่มสอบครั้งใหม่: attemptsUsed +1
-            (
-              request.resource.data.attemptsUsed == oldAttemptsUsed() + 1
-              && request.resource.data.terminatedCount == oldTerminatedCount()
-            )
-            ||
-            // ถูกยุติการสอบ: terminatedCount +1
-            (
-              request.resource.data.attemptsUsed == oldAttemptsUsed()
-              && request.resource.data.terminatedCount == oldTerminatedCount() + 1
-            )
-          )
-        );
-
-      // อ่านได้เฉพาะ document ที่มี prefix UID ของตัวเอง
-      allow read: if isAdmin() || attemptDocBelongsToCurrentUser();
-
-      allow delete: if isAdmin();
-    }
-
-    // =====================================================
-    // EXAM REGISTRATIONS
-    // =====================================================
-    match /registrations/{registrationId} {
-      function validRegistration() {
-        return request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.studentId is string
-          && request.resource.data.name is string
-          && request.resource.data.className is string
-          && request.resource.data.department is string
-          && request.resource.data.subjectId is string
-          && request.resource.data.subjectCode is string
-          && request.resource.data.subjectName is string
-          && request.resource.data.attemptToken is string
-          && request.resource.data.attemptNumber is int
-          && request.resource.data.attemptNumber >= 1
-          && request.resource.data.attemptNumber <= 2
-          && request.resource.data.maxAttempts == 2
-          && request.resource.data.status == "started";
-      }
-
-      // Student creates a NEW registration for every attempt.
-      allow create: if isAdmin()
-        || (
-          signedIn()
-          && validRegistration()
-        );
-
-      // Student never needs to overwrite a registration.
-      allow read, update, delete: if isAdmin();
-    }
-
-    // =====================================================
-    // SUBMISSIONS
+    // SUBMISSIONS — CRITICAL PATH
+    // Student sends answers directly. No registration/attempt
+    // document is required to submit.
     // =====================================================
     match /submissions/{submissionId} {
-      allow create: if
-        (
-          isAdmin()
-          || (
-            signedIn()
-            && request.resource.data.ownerUid == request.auth.uid
-          )
-          || request.auth == null
-        )
-        && request.resource.data.registrationId is string
-        && request.resource.data.attemptToken is string
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.student is map
+        && request.resource.data.student.studentId is string
         && request.resource.data.subjectId is string
         && request.resource.data.subjectCode is string
         && request.resource.data.subjectName is string
-        && request.resource.data.student.studentId is string
         && request.resource.data.questionIds is list
         && request.resource.data.selectedOriginal is list
         && request.resource.data.questionIds.size() == 50
-        && request.resource.data.selectedOriginal.size() == 50
-        && exists(
-          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
-        )
-        && get(
-          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
-        ).data.attemptToken == request.resource.data.attemptToken
-        && get(
-          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
-        ).data.studentId == request.resource.data.student.studentId
-        && get(
-          /databases/$(database)/documents/registrations/$(request.resource.data.registrationId)
-        ).data.subjectId == request.resource.data.subjectId;
+        && request.resource.data.selectedOriginal.size() == 50;
 
       allow read, update, delete: if isAdmin();
     }
 
     // =====================================================
     // STUDENT REQUESTS
-    // score_view = ขออนุมัติดูคะแนนรายบุคคล
-    // retake     = ขอสอบแก้
     // =====================================================
     match /examRequests/{requestId} {
-      function validStudentRequest() {
-        return signedIn()
-          && request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.studentId is string
-          && request.resource.data.studentName is string
-          && request.resource.data.subjectId is string
-          && request.resource.data.subjectCode is string
-          && request.resource.data.submissionId is string
-          && (
-            request.resource.data.requestType == "score_view"
-            || request.resource.data.requestType == "retake"
-          )
-          && request.resource.data.status == "pending";
-      }
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.studentId is string
+        && request.resource.data.subjectId is string
+        && request.resource.data.submissionId is string
+        && request.resource.data.status == "pending";
 
-      allow create: if validStudentRequest();
-
-      // นักศึกษาเห็นเฉพาะคำร้องของตัวเอง รวมผลอนุมัติคะแนนของตัวเอง
       allow read: if isAdmin()
         || (
           signedIn()
           && resource.data.ownerUid == request.auth.uid
         );
 
-      // เฉพาะ Admin เปลี่ยน pending -> approved/rejected และใส่คะแนนที่อนุมัติ
       allow update, delete: if isAdmin();
     }
 
+    // =====================================================
+    // OLD COLLECTIONS
+    // Not required to start or submit an exam.
+    // =====================================================
+    match /registrations/{registrationId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /examAttempts/{attemptId} {
+      allow read, write: if isAdmin();
+    }
+
+    // =====================================================
+    // SUBJECTS / SETTINGS
+    // =====================================================
     match /subjects/{subjectId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();

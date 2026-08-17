@@ -857,3 +857,76 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
   opacity:.55;background:rgba(0,0,0,.55);color:#d7e9f7;
   pointer-events:none;
 }
+
+.emergency-live-banner{margin:10px auto;max-width:1200px;border:2px solid rgba(74,222,128,.65);background:rgba(22,101,52,.18);color:#c8ffd8}.emergency-mode{border-color:rgba(74,222,128,.65)!important;background:rgba(22,101,52,.18)!important}
+
+
+/* Stable Core */
+.stable-ready-note{
+  margin:14px 0 4px;
+  padding:11px 13px;
+  border:1px solid rgba(74,222,128,.42);
+  border-radius:12px;
+  background:rgba(34,197,94,.10);
+  display:grid;
+  gap:3px;
+}
+.stable-ready-note b{color:#9ff2b8}
+.system-version-badge{
+  position:fixed;
+  right:8px;
+  bottom:6px;
+  z-index:999999;
+  font:600 10px/1.2 monospace;
+  padding:4px 7px;
+  border-radius:7px;
+  opacity:.58;
+  background:rgba(0,0,0,.62);
+  color:#d7e9f7;
+  pointer-events:none;
+}
+
+
+/* =========================================================
+   CATEGORIZED STUDENT REGISTRATION
+   ========================================================= */
+.registration-info-banner{
+  margin:14px 0 18px;
+  padding:14px 16px;
+  border:1px solid rgba(56,189,248,.35);
+  border-radius:14px;
+  background:rgba(14,116,144,.09);
+  display:grid;
+  gap:3px;
+}
+.registration-info-banner b{color:var(--accent,#38bdf8)}
+.registration-profile-grid .field small{
+  display:block;
+  margin-top:6px;
+  opacity:.7;
+  font-size:.78rem;
+}
+.registration-profile-grid select:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+.registration-accept{
+  margin-top:18px;
+}
+.registration-submit-row{
+  align-items:center;
+}
+.admin-filter-grid-wide{
+  grid-template-columns:repeat(3,minmax(180px,1fr));
+}
+.admin-category-notice{
+  border-color:rgba(56,189,248,.38);
+  background:rgba(14,116,144,.09);
+}
+@media(max-width:980px){
+  .admin-filter-grid-wide{grid-template-columns:repeat(2,minmax(160px,1fr))}
+}
+@media(max-width:640px){
+  .registration-profile-grid,.admin-filter-grid-wide{grid-template-columns:1fr}
+  .registration-submit-row{align-items:stretch}
+}
