@@ -1,0 +1,22 @@
+NANGRONG EXAM SYSTEM - FULL PROJECT V3
+Version: 20260817-EXAMFIX-V3
+
+ให้นำไฟล์ทั้งหมดใน ZIP วางทับที่ ROOT ของ GitHub Repository
+และนำ firestore.rules ไป Publish ที่ Firebase > Firestore Database > Rules
+
+FILES:
+- .nojekyll | 0 bytes | sha256:e3b0c44298fc
+- admin.html | 23,229 bytes | sha256:327e61a0f3de
+- admin.js | 39,741 bytes | sha256:0ff927f7740c
+- answer-bank-30min.json | 1,035,136 bytes | sha256:36d536c9adb8
+- data.js | 111 bytes | sha256:8f9a9678d99d
+- firebase-config.js | 661 bytes | sha256:929e7d070dca
+- firebase-service.js | 1,182 bytes | sha256:be7231c34f17
+- firestore.rules | 9,738 bytes | sha256:acd7f810bdd1
+- index.html | 20,548 bytes | sha256:8f99b70b2050
+- initial-question-bank-all-subjects.json | 1,170,947 bytes | sha256:cc56e27cbb6f
+- QUESTION_BANK_MANIFEST.json | 3,954 bytes | sha256:b9f2604a22de
+- README-วางทับ-GitHub.txt | 19,502 bytes | sha256:47e3b5e5a6e2
+- student.js | 58,386 bytes | sha256:7d3f48bf872e
+- styles.css | 30,827 bytes | sha256:0f60cd807f7b
+- subjects.js | 3,010 bytes | sha256:9846cf52b846
