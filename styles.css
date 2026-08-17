@@ -849,3 +849,11 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 #forfeitBtn{
   border-color:rgba(248,113,113,.65);
 }
+
+.system-version-badge{
+  position:fixed;right:8px;bottom:6px;z-index:999999;
+  font:600 10px/1.2 monospace;
+  padding:4px 7px;border-radius:7px;
+  opacity:.55;background:rgba(0,0,0,.55);color:#d7e9f7;
+  pointer-events:none;
+}

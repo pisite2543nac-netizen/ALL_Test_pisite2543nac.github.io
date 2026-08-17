@@ -118,11 +118,19 @@ service cloud.firestore {
       // B) increment terminatedCount exactly +1, never above attemptsUsed
       allow update: if isAdmin() || (
         signedIn()
-        && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.studentId == resource.data.studentId
         && request.resource.data.subjectId == resource.data.subjectId
         && request.resource.data.maxAttempts == 2
+        && (
+          // Normal current document
+          resource.data.ownerUid == request.auth.uid
+
+          // Legacy migration: old examAttempts may not have ownerUid.
+          // The authenticated user may claim only a record whose studentId
+          // and subjectId remain unchanged.
+          || !("ownerUid" in resource.data)
+        )
         && (
           (
             request.resource.data.attemptsUsed == resource.data.attemptsUsed + 1
@@ -141,7 +149,14 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (
           signedIn()
-          && resource.data.ownerUid == request.auth.uid
+          && (
+            resource.data.ownerUid == request.auth.uid
+            || (
+              !("ownerUid" in resource.data)
+              && exists(/databases/$(database)/documents/studentUsers/$(request.auth.uid))
+              && get(/databases/$(database)/documents/studentUsers/$(request.auth.uid)).data.studentId == resource.data.studentId
+            )
+          )
         );
 
       allow delete: if isAdmin();

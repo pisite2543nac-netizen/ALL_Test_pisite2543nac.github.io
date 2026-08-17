@@ -208,3 +208,14 @@ EXAM START FIX
 - หาก Firestore ปฏิเสธ Registration จะไม่เสียสิทธิ์สอบ
 - ต้อง Publish firestore_rules_EXAM_START_FIX.rules
 - หลัง Publish รอประมาณ 1 นาที และกด Ctrl+F5 ที่หน้าเว็บ
+
+
+EXAM START FIX V2 / CACHE BUST
+Version: 20260817-EXAMFIX-V2
+- index.html บังคับโหลด student.js?v=20260817-EXAMFIX-V2
+- admin.html บังคับโหลด admin.js?v=20260817-EXAMFIX-V2
+- มุมขวาล่างจะแสดง System 20260817-EXAMFIX-V2 เพื่อยืนยันว่าเว็บโหลดชุดใหม่จริง
+- Rules รองรับ legacy examAttempts ที่ไม่มี ownerUid
+- Rules รองรับ legacy registrations
+- Attempt + Registration สร้างแบบ Transaction เดียว: ไม่สำเร็จ = ไม่หักสิทธิ์
+- หลัง Upload GitHub และ Publish Rules ให้ตรวจว่ามุมขวาล่างขึ้น 20260817-EXAMFIX-V2

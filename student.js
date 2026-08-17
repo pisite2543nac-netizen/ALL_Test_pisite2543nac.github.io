@@ -767,7 +767,7 @@ async function beginExamFromInstructions(){
       return;
     }
     if(e?.code==='permission-denied'){
-      showMsg('instructionMsg','เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ examAttempts/registrations กรุณา Publish Rules ชุด EXAM START FIX ที่ให้มาพร้อมไฟล์เว็บ');
+      showMsg('instructionMsg','[20260817-EXAMFIX-V2] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ examAttempts/registrations กรุณา Publish Rules EXAM START FIX V2');
       return;
     }
     showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');
