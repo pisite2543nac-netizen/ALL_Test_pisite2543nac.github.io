@@ -780,7 +780,7 @@ async function beginExamFromInstructions(){
       return;
     }
     if(e?.code==='permission-denied'){
-      showMsg('instructionMsg','[20260817-EXAMFIX-V4] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ กรุณา Publish Rules EXAM START FIX V4 LEGACY');
+      showMsg('instructionMsg','[20260817-EXAMFIX-V5] เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ กรุณา Publish Rules EXAM START FIX V5 DOCID');
       return;
     }
     showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');

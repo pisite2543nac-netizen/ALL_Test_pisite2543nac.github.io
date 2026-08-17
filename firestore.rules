@@ -93,31 +93,31 @@ service cloud.firestore {
     // =====================================================
     // EXAM ATTEMPT LIMIT
     // 1 User x 1 Subject = maximum 2 attempts
-    // รองรับข้อมูล examAttempts รุ่นเก่าที่ field ยังไม่ครบ
+    //
+    // IMPORTANT V5:
+    // สิทธิ์เจ้าของยึดจาก Document ID:
+    // {request.auth.uid}__{subjectId}
+    // จึงไม่ติด ownerUid เก่าที่อยู่ใน document รุ่นก่อน
     // =====================================================
     match /examAttempts/{attemptId} {
 
-      function ownAttemptCreate() {
+      function attemptDocBelongsToCurrentUser() {
         return signedIn()
-          && request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.studentId is string
-          && request.resource.data.subjectId is string
-          && request.resource.data.attemptsUsed == 1
-          && request.resource.data.terminatedCount == 0
-          && request.resource.data.maxAttempts == 2;
+          && attemptId.matches('^' + request.auth.uid + '__.+$');
       }
 
-      function sameStudentAndSubject() {
-        return request.resource.data.studentId is string
+      function validAttemptShape() {
+        return request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.studentId is string
           && request.resource.data.subjectId is string
-          && (
-            !("studentId" in resource.data)
-            || request.resource.data.studentId == resource.data.studentId
-          )
-          && (
-            !("subjectId" in resource.data)
-            || request.resource.data.subjectId == resource.data.subjectId
-          );
+          && attemptId == request.auth.uid + "__" + request.resource.data.subjectId
+          && request.resource.data.maxAttempts == 2
+          && request.resource.data.attemptsUsed is int
+          && request.resource.data.attemptsUsed >= 0
+          && request.resource.data.attemptsUsed <= 2
+          && request.resource.data.terminatedCount is int
+          && request.resource.data.terminatedCount >= 0
+          && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed;
       }
 
       function oldAttemptsUsed() {
@@ -132,59 +132,37 @@ service cloud.firestore {
           : 0;
       }
 
-      function ownerIsCurrentUserOrLegacy() {
-        return !("ownerUid" in resource.data)
-          || resource.data.ownerUid == request.auth.uid;
-      }
+      allow create: if isAdmin()
+        || (
+          attemptDocBelongsToCurrentUser()
+          && validAttemptShape()
+          && request.resource.data.attemptsUsed == 1
+          && request.resource.data.terminatedCount == 0
+        );
 
-      function ownAttemptUpdate() {
-        return signedIn()
-          && request.resource.data.ownerUid == request.auth.uid
-          && ownerIsCurrentUserOrLegacy()
-          && sameStudentAndSubject()
-          && request.resource.data.maxAttempts == 2
-          && request.resource.data.attemptsUsed >= 0
-          && request.resource.data.attemptsUsed <= 2
-          && request.resource.data.terminatedCount >= 0
-          && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed
+      // รองรับ migration document เก่าทุกแบบ
+      // ไม่สน ownerUid เดิมใน resource หาก Document ID เป็นของ User คนนี้
+      allow update: if isAdmin()
+        || (
+          attemptDocBelongsToCurrentUser()
+          && validAttemptShape()
           && (
-            // เริ่มสอบรอบใหม่: attemptsUsed เพิ่มทีละ 1
+            // เริ่มสอบครั้งใหม่: attemptsUsed +1
             (
               request.resource.data.attemptsUsed == oldAttemptsUsed() + 1
               && request.resource.data.terminatedCount == oldTerminatedCount()
             )
             ||
-            // บันทึกการถูกยุติ: terminatedCount เพิ่มทีละ 1
+            // ถูกยุติการสอบ: terminatedCount +1
             (
               request.resource.data.attemptsUsed == oldAttemptsUsed()
               && request.resource.data.terminatedCount == oldTerminatedCount() + 1
             )
-          );
-      }
-
-      allow create: if isAdmin() || ownAttemptCreate();
-      allow update: if isAdmin() || ownAttemptUpdate();
-
-      allow read: if isAdmin()
-        || (
-          signedIn()
-          && (
-            (
-              "ownerUid" in resource.data
-              && resource.data.ownerUid == request.auth.uid
-            )
-            ||
-            (
-              !("ownerUid" in resource.data)
-              && exists(/databases/$(database)/documents/studentUsers/$(request.auth.uid))
-              && (
-                !("studentId" in resource.data)
-                || get(/databases/$(database)/documents/studentUsers/$(request.auth.uid)).data.studentId
-                   == resource.data.studentId
-              )
-            )
           )
         );
+
+      // อ่านได้เฉพาะ document ที่มี prefix UID ของตัวเอง
+      allow read: if isAdmin() || attemptDocBelongsToCurrentUser();
 
       allow delete: if isAdmin();
     }

@@ -243,3 +243,19 @@ Version: 20260817-EXAMFIX-V4
 - Attempt + Registration ยังคงเป็น Transaction เดียว
 - หากเริ่มสอบไม่สำเร็จจะไม่หักสิทธิ์
 - ต้อง Publish firestore_rules_EXAM_START_FIX_V4_LEGACY.rules
+
+
+EXAM START FIX V5 DOCID
+Version: 20260817-EXAMFIX-V5
+
+แนวทางแก้หลัก:
+- examAttempts ใช้ Document ID = UID__subjectId เป็นเจ้าของสิทธิ์โดยตรง
+- ไม่อ้าง ownerUid เก่าใน resource สำหรับการอนุญาต migration
+- รองรับ document เก่าที่ ownerUid ผิด/ไม่มี
+- รองรับ document เก่าที่ attemptsUsed/terminatedCount ยังไม่ครบ
+- User อ่าน/เขียนได้เฉพาะ document ที่ขึ้นต้นด้วย UID ของตัวเอง
+- Registration ยังสร้างใหม่ทุกครั้ง
+- Attempt + Registration ยังเป็น Transaction เดียว
+- เริ่มไม่สำเร็จ = ไม่หักสิทธิ์สอบ
+
+ต้อง Publish firestore_rules_EXAM_START_FIX_V5_DOCID.rules
