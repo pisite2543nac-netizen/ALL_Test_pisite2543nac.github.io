@@ -93,6 +93,7 @@ service cloud.firestore {
     // =====================================================
     // EXAM ATTEMPT LIMIT
     // 1 User x 1 Subject = maximum 2 attempts
+    // รองรับข้อมูล examAttempts รุ่นเก่าที่ field ยังไม่ครบ
     // =====================================================
     match /examAttempts/{attemptId} {
 
@@ -106,27 +107,57 @@ service cloud.firestore {
           && request.resource.data.maxAttempts == 2;
       }
 
+      function sameStudentAndSubject() {
+        return request.resource.data.studentId is string
+          && request.resource.data.subjectId is string
+          && (
+            !("studentId" in resource.data)
+            || request.resource.data.studentId == resource.data.studentId
+          )
+          && (
+            !("subjectId" in resource.data)
+            || request.resource.data.subjectId == resource.data.subjectId
+          );
+      }
+
+      function oldAttemptsUsed() {
+        return ("attemptsUsed" in resource.data)
+          ? resource.data.attemptsUsed
+          : 0;
+      }
+
+      function oldTerminatedCount() {
+        return ("terminatedCount" in resource.data)
+          ? resource.data.terminatedCount
+          : 0;
+      }
+
+      function ownerIsCurrentUserOrLegacy() {
+        return !("ownerUid" in resource.data)
+          || resource.data.ownerUid == request.auth.uid;
+      }
+
       function ownAttemptUpdate() {
         return signedIn()
           && request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.studentId == resource.data.studentId
-          && request.resource.data.subjectId == resource.data.subjectId
+          && ownerIsCurrentUserOrLegacy()
+          && sameStudentAndSubject()
           && request.resource.data.maxAttempts == 2
           && request.resource.data.attemptsUsed >= 0
           && request.resource.data.attemptsUsed <= 2
           && request.resource.data.terminatedCount >= 0
           && request.resource.data.terminatedCount <= request.resource.data.attemptsUsed
           && (
-            // ใช้สิทธิ์สอบใหม่: +1 ครั้ง
+            // เริ่มสอบรอบใหม่: attemptsUsed เพิ่มทีละ 1
             (
-              request.resource.data.attemptsUsed == resource.data.attemptsUsed + 1
-              && request.resource.data.terminatedCount == resource.data.terminatedCount
+              request.resource.data.attemptsUsed == oldAttemptsUsed() + 1
+              && request.resource.data.terminatedCount == oldTerminatedCount()
             )
             ||
-            // บันทึกการถูกยุติ: terminated +1
+            // บันทึกการถูกยุติ: terminatedCount เพิ่มทีละ 1
             (
-              request.resource.data.attemptsUsed == resource.data.attemptsUsed
-              && request.resource.data.terminatedCount == resource.data.terminatedCount + 1
+              request.resource.data.attemptsUsed == oldAttemptsUsed()
+              && request.resource.data.terminatedCount == oldTerminatedCount() + 1
             )
           );
       }
@@ -137,7 +168,22 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (
           signedIn()
-          && resource.data.ownerUid == request.auth.uid
+          && (
+            (
+              "ownerUid" in resource.data
+              && resource.data.ownerUid == request.auth.uid
+            )
+            ||
+            (
+              !("ownerUid" in resource.data)
+              && exists(/databases/$(database)/documents/studentUsers/$(request.auth.uid))
+              && (
+                !("studentId" in resource.data)
+                || get(/databases/$(database)/documents/studentUsers/$(request.auth.uid)).data.studentId
+                   == resource.data.studentId
+              )
+            )
+          )
         );
 
       allow delete: if isAdmin();

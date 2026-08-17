@@ -231,3 +231,15 @@ Version: 20260817-EXAMFIX-V3
 - ถ้า Rules ปฏิเสธ จะไม่หักสิทธิ์สอบ
 - Firestore Rules ของ registrations ง่ายและชัดขึ้น
 - ต้อง Publish firestore_rules_EXAM_START_FIX_V3.rules
+
+
+EXAM START FIX V4 LEGACY
+Version: 20260817-EXAMFIX-V4
+- รองรับ examAttempts เก่าที่ไม่มี ownerUid
+- รองรับ examAttempts เก่าที่ไม่มี terminatedCount
+- รองรับ examAttempts เก่าที่ไม่มี maxAttempts
+- รองรับ document เก่าที่ field ยังไม่ครบ โดยใช้ค่าเริ่มต้น attemptsUsed=0, terminatedCount=0 ใน Rules
+- Registration ยังคงสร้างใหม่ทุกครั้งเหมือน V3
+- Attempt + Registration ยังคงเป็น Transaction เดียว
+- หากเริ่มสอบไม่สำเร็จจะไม่หักสิทธิ์
+- ต้อง Publish firestore_rules_EXAM_START_FIX_V4_LEGACY.rules
