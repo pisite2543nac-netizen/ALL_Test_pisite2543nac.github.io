@@ -37,3 +37,32 @@ Version: 20260817-STABLE-CATEGORIZED-V1
 8. Ctrl+F5
 9. ตรวจมุมขวาล่าง: System 20260817-STABLE-CATEGORIZED-V1
 10. ทดสอบ Login > Code > คำชี้แจง > Fullscreen > ทำข้อสอบ > ส่ง > ตรวจ Admin
+
+
+MAJOR DROPDOWN FIX V2
+Version: 20260817-STABLE-CATEGORIZED-V2
+- ช่องสาขาวิชาไม่ disabled อีกต่อไป
+- เปิดหน้า Register แล้วเลือกสาขาได้ทันที
+- หากเลือกแผนก ระบบจะกรองสาขาให้ตรงกับแผนก
+- หาก JavaScript การกรองมีปัญหา สาขายังเลือกได้จาก Static HTML fallback
+- หน้า Admin > เพิ่ม User ใช้หลักเดียวกัน
+
+
+USER DATASET SPLIT V3
+Version: 20260817-STABLE-CATEGORIZED-V3-SPLIT
+
+หลักการ:
+- ไม่ Migration / ไม่แก้ไขข้อมูล studentUsers ชุดเก่าอัตโนมัติ
+- User ชุดเก่า = ไม่มี marker categorized และไม่มีชุด field สาขาครบ
+- User ชุดใหม่ = profileFormat='categorized' / profileSchemaVersion=2
+- User ที่เคยสร้างใน Categorized V1/V2 และมี classLevel,classRoom,departmentId,majorId,major,majorCode ครบ
+  จะถูกแสดงในชุดใหม่โดยการ "ตรวจรูปแบบ" เท่านั้น ไม่มีการเขียนข้อมูลกลับฐานข้อมูล
+- User สมัครใหม่ทุกคนจะถูกติด marker ชุดใหม่
+- User ที่ Admin สร้างใหม่ทุกคนจะถูกติด marker ชุดใหม่
+
+หน้า Admin:
+- ตาราง User ชุดใหม่ แยกต่างหาก
+- ตาราง User ชุดเก่า แยกต่างหาก
+- ชุดใหม่กรอง Level / Room / Department / Major / Subject / Status
+- ชุดเก่าค้นหาข้อมูลเดิม + Subject / Status
+- ข้อมูลชุดเก่าแสดง className และ department เดิมตรง ๆ

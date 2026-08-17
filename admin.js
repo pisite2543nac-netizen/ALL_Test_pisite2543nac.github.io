@@ -80,21 +80,24 @@ function fillAdminDepartmentSelect(){
 function fillAdminMajorSelect(departmentId, selected=''){
   const el=$('newStudentMajor');
   if(!el)return;
+
   const d=departmentById(departmentId);
+  const majors=d
+    ? d.majors
+    : DEPARTMENTS.flatMap(dep=>dep.majors);
+
   el.innerHTML='<option value="">-- เลือกสาขาวิชา --</option>';
-  if(!d){
-    el.disabled=true;
-    $('newStudentMajorCode').textContent='-';
-    return;
-  }
-  d.majors.forEach(m=>{
+  majors.forEach(m=>{
     const o=document.createElement('option');
     o.value=m.id;
     o.textContent=`${m.name} (${m.code})`;
     el.appendChild(o);
   });
+
   el.disabled=false;
-  if(selected)el.value=selected;
+  if(selected && [...el.options].some(o=>o.value===selected)){
+    el.value=selected;
+  }
   updateAdminMajorCode();
 }
 function updateAdminMajorCode(){
@@ -111,6 +114,7 @@ function matchesSearch(parts,term){
 }
 
 [$('resultSubjectFilter'),$('regSubjectFilter'),$('questionSubjectFilter')].forEach(x=>fillSubjectSelect(x,true));
+fillSubjectSelect($('legacySubjectFilter'),true,'ทุกวิชา');
 fillSubjectSelect($('qSubject'));
 fillSubjectSelect($('newStudentSubject'),true,'ยังไม่กำหนดวิชา');
 fillSimpleSelect($('resultLevelFilter'),CLASS_LEVELS,'ทุกระดับชั้น');
@@ -484,6 +488,31 @@ async function rejectExamRequest(r){
   },{merge:true});
 }
 
+function isCategorizedProfile(u={}){
+  // Explicit marker for all registrations created from this version onward.
+  if(u.profileFormat==='categorized' || Number(u.profileSchemaVersion||0)>=2)return true;
+
+  // Existing Categorized V1/V2 users are recognized by their stored shape,
+  // WITHOUT writing/migrating anything back to Firestore.
+  return !!(
+    u.classLevel &&
+    u.classRoom &&
+    u.departmentId &&
+    u.majorId &&
+    u.major &&
+    u.majorCode
+  );
+}
+function isLegacyProfile(u={}){
+  return !isCategorizedProfile(u);
+}
+function legacyMeta(u={}){
+  return {
+    className:String(u.className||'').trim(),
+    department:String(u.department||'').trim()
+  };
+}
+
 function latestCheckinForUser(u){
   const rows=lastRegs.filter(r=>
     (u.uid && r.ownerUid===u.uid) ||
@@ -498,7 +527,17 @@ function latestCheckinForUser(u){
 function uniqueUserRows(){
   return lastStudentUsers.map(u=>{
     const latest=latestCheckinForUser(u);
-    const meta=normalizedStudentMeta(u);
+    const categorized=isCategorizedProfile(u);
+    const meta=categorized ? normalizedStudentMeta(u) : {
+      classLevel:'',
+      classRoom:'',
+      className:String(u.className||latest.className||'').trim(),
+      departmentId:'',
+      department:String(u.department||latest.department||'').trim(),
+      majorId:'',
+      major:'',
+      majorCode:''
+    };
     return {
       ...latest,
       ...u,
@@ -507,6 +546,7 @@ function uniqueUserRows(){
       studentId:u.studentId||latest.studentId||'',
       name:u.name||latest.name||'',
       ...meta,
+      datasetGroup:categorized?'categorized':'legacy',
       status:latest.status||'registered',
       subjectId:latest.subjectId||'',
       subjectCode:latest.subjectCode||'',
@@ -515,6 +555,7 @@ function uniqueUserRows(){
     };
   });
 }
+
 function filteredRegs(){
   const subject=$('regSubjectFilter').value;
   const level=$('regLevelFilter').value;
@@ -525,6 +566,7 @@ function filteredRegs(){
   const term=norm($('regSearch').value);
 
   return uniqueUserRows().filter(r=>
+    r.datasetGroup==='categorized' &&
     (!subject||r.subjectId===subject) &&
     (!level||r.classLevel===level) &&
     (!room||r.classRoom===room) &&
@@ -535,23 +577,51 @@ function filteredRegs(){
       r.studentId,r.name,r.classLevel,r.classRoom,r.className,
       r.department,r.major,r.majorCode,r.subjectCode,r.subjectName
     ],term)
-  ).sort((a,b)=>{
-    const aa=a.latestAt?.seconds||Date.parse(a.latestAt||0)/1000||0;
-    const bb=b.latestAt?.seconds||Date.parse(b.latestAt||0)/1000||0;
-    return bb-aa;
-  });
+  ).sort(userLatestSort);
 }
-function renderRegs(){
-  const rows=filteredRegs(),tb=$('regRows');tb.innerHTML='';
-  $('visibleUserCount').textContent=rows.length;
 
+function filteredLegacyRegs(){
+  const subject=$('legacySubjectFilter').value;
+  const status=$('legacyStatusFilter').value;
+  const term=norm($('legacyUserSearch').value);
+
+  return uniqueUserRows().filter(r=>
+    r.datasetGroup==='legacy' &&
+    (!subject||r.subjectId===subject) &&
+    (!status||r.status===status) &&
+    matchesSearch([
+      r.studentId,r.name,r.className,r.department,r.subjectCode,r.subjectName
+    ],term)
+  ).sort(userLatestSort);
+}
+
+function userLatestSort(a,b){
+  const aa=a.latestAt?.seconds||Date.parse(a.latestAt||0)/1000||0;
+  const bb=b.latestAt?.seconds||Date.parse(b.latestAt||0)/1000||0;
+  return bb-aa;
+}
+
+function renderRegs(){
+  const all=uniqueUserRows();
+  const categorizedAll=all.filter(r=>r.datasetGroup==='categorized');
+  const legacyAll=all.filter(r=>r.datasetGroup==='legacy');
+  const rows=filteredRegs();
+  const legacyRows=filteredLegacyRegs();
+
+  $('newUserTotal').textContent=categorizedAll.length;
+  $('legacyUserTotal').textContent=legacyAll.length;
+  $('visibleNewUserCount').textContent=rows.length;
+  $('visibleLegacyUserCount').textContent=legacyRows.length;
+
+  const tb=$('regRows');
+  tb.innerHTML='';
   rows.forEach(r=>{
     const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>${fmtDate(r.latestAt)}</td>
       <td>${esc(subject)}</td>
-      <td><b>${esc(r.studentId)}</b></td>
+      <td><b>${esc(r.studentId)}</b><div class="dataset-mini new">NEW</div></td>
       <td>${esc(r.name)}</td>
       <td>${esc(r.classLevel||'-')}</td>
       <td>${esc(r.classRoom||'-')}</td>
@@ -559,13 +629,27 @@ function renderRegs(){
       <td>${esc(r.major||'-')}</td>
       <td>${esc(r.majorCode||'-')}</td>
       <td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td>
-      <td>
-        <div class="row user-manage-actions">
-          <button class="btn danger small delete-user">ลบ User</button>
-        </div>
-      </td>`;
+      <td><button class="btn danger small delete-user">ลบ User</button></td>`;
     tr.querySelector('.delete-user').onclick=()=>deleteUserFromSystem(r);
     tb.appendChild(tr);
+  });
+
+  const legacyTb=$('legacyUserRows');
+  legacyTb.innerHTML='';
+  legacyRows.forEach(r=>{
+    const subject=r.subjectId?subjectLabel(r.subjectId,r.subjectCode,r.subjectName):'ยังไม่เลือกวิชา';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${fmtDate(r.latestAt)}</td>
+      <td>${esc(subject)}</td>
+      <td><b>${esc(r.studentId)}</b><div class="dataset-mini legacy">OLD</div></td>
+      <td>${esc(r.name)}</td>
+      <td>${esc(r.className||'-')}</td>
+      <td>${esc(r.department||'-')}</td>
+      <td><span class="status-chip ${statusClass(r.status)}">${esc(statusLabel(r.status))}</span></td>
+      <td><button class="btn danger small delete-user">ลบ User</button></td>`;
+    tr.querySelector('.delete-user').onclick=()=>deleteUserFromSystem(r);
+    legacyTb.appendChild(tr);
   });
 }
 
@@ -682,12 +766,15 @@ $('saveNewUser').onclick=async()=>{
     await setDoc(doc(db,'studentUsers',cred.user.uid),{
       studentId,name,classLevel,classRoom,className,
       departmentId,department,majorId,major,majorCode,
+      profileFormat:'categorized',
+      profileSchemaVersion:2,
       wantsKey:true,email:studentEmail(studentId),
       active:true,createdByAdmin:true,createdAt:serverTimestamp(),createdAtClient:new Date().toISOString()
     });
     await setDoc(doc(db,'studentCheckins',`admin-${Date.now()}-${crypto.randomUUID()}`),{
       ownerUid:cred.user.uid,studentId,name,classLevel,classRoom,className,
-      departmentId,department,majorId,major,majorCode,status,
+      departmentId,department,majorId,major,majorCode,
+      profileFormat:'categorized',profileSchemaVersion:2,status,
       subjectId:s?.id||'',subjectCode:s?.code||'',subjectName:s?.name||'',
       wantsKey:true,createdByAdmin:true,registeredAt:serverTimestamp(),registeredAtClient:new Date().toISOString()
     });
@@ -844,7 +931,7 @@ function resultExportRows(){
 function userExportRows(){
   return filteredRegs().map(r=>({
     'วันเวลา':fmtDate(r.registeredAt||r.registeredAtClient),'รหัสวิชา':r.subjectCode||'','รายวิชา':r.subjectName||'',
-    'เลขนักศึกษา':r.studentId||'','ชื่อ-นามสกุล':r.name||'','ระดับชั้น':r.classLevel||'','ห้อง':r.classRoom||'','แผนก':r.department||'','สาขา':r.major||'','รหัสสาขา':r.majorCode||'','สถานะ':statusLabel(r.status)
+    'ชุดข้อมูล':r.datasetGroup==='categorized'?'ชุดใหม่':'ชุดเก่า','เลขนักศึกษา':r.studentId||'','ชื่อ-นามสกุล':r.name||'','ระดับชั้น':r.classLevel||'','ห้อง':r.classRoom||'','แผนก':r.department||'','สาขา':r.major||'','รหัสสาขา':r.majorCode||'','สถานะ':statusLabel(r.status)
   }));
 }
 $('exportResultsExcel').onclick=()=>saveWorkbook({'ผลสอบ':resultExportRows()},`ผลสอบ-${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -889,6 +976,8 @@ $('requestSearch').oninput=renderRequests;
 ['requestTypeFilter','requestStatusFilter'].forEach(id=>$(id).onchange=renderRequests);
 $('refreshRequestsAdmin').onclick=renderAll;
 ['regSubjectFilter','regLevelFilter','regRoomFilter','regDeptFilter','regMajorFilter','regStatusFilter'].forEach(id=>$(id).onchange=renderRegs);
+$('legacyUserSearch').oninput=renderRegs;
+['legacySubjectFilter','legacyStatusFilter'].forEach(id=>$(id).onchange=renderRegs);
 $('regSearch').oninput=renderRegs;
 $('questionSubjectFilter').onchange=renderQuestions;
 

@@ -1,4 +1,4 @@
-// SYSTEM VERSION: 20260817-STABLE-CATEGORIZED-V1
+// SYSTEM VERSION: 20260817-STABLE-CATEGORIZED-V3-SPLIT
 import { studentAuth, studentDb, isFirebaseConfigured } from './firebase-service.js';
 import { ADMIN_UID } from './firebase-config.js';
 import { SUBJECTS } from './subjects.js';
@@ -49,21 +49,26 @@ function fillDepartmentSelect(){
 function fillMajorSelect(departmentId,selected=''){
   const el=$('major');
   if(!el)return;
+
   const d=departmentById(departmentId);
+  const majors=d
+    ? d.majors
+    : DEPARTMENTS.flatMap(dep=>dep.majors);
+
   el.innerHTML='<option value="">-- เลือกสาขาวิชา --</option>';
-  if(!d){
-    el.disabled=true;
-    $('majorCodeText').textContent='-';
-    return;
-  }
-  d.majors.forEach(m=>{
+  majors.forEach(m=>{
     const o=document.createElement('option');
     o.value=m.id;
     o.textContent=`${m.name} (${m.code})`;
     el.appendChild(o);
   });
+
+  // V2: ไม่ล็อกช่องสาขาเด็ดขาด เพื่อให้เลือกได้แม้การกรองแผนกมีปัญหา
   el.disabled=false;
-  if(selected)el.value=selected;
+
+  if(selected && [...el.options].some(o=>o.value===selected)){
+    el.value=selected;
+  }
   updateMajorCode();
 }
 function updateMajorCode(){
@@ -134,6 +139,8 @@ async function createStudentCheckin(uid, createdBy='student'){
     majorId:student.majorId||'',
     major:student.major||'',
     majorCode:student.majorCode||'',
+    profileFormat:student.profileFormat||'',
+    profileSchemaVersion:Number(student.profileSchemaVersion||0),
     wantsKey,
     status:'registered',
     subjectId:'',
@@ -202,11 +209,16 @@ async function registerUser(){
     student={
       studentId,name,classLevel,classRoom,className,
       departmentId,department,majorId,major,majorCode,
+      profileFormat:'categorized',
+      profileSchemaVersion:2,
       wantsKey,uid:cred.user.uid
     };
     await setDoc(doc(studentDb,'studentUsers',cred.user.uid),{
       studentId,name,classLevel,classRoom,className,
-      departmentId,department,majorId,major,majorCode,wantsKey,
+      departmentId,department,majorId,major,majorCode,
+      profileFormat:'categorized',
+      profileSchemaVersion:2,
+      wantsKey,
       email:studentEmail(studentId),
       active:true,
       createdAt:serverTimestamp(),
@@ -262,6 +274,8 @@ async function loadLoggedInStudent(user){
     studentId:p.studentId||'',
     name:p.name||'',
     ...meta,
+    profileFormat:p.profileFormat||'',
+    profileSchemaVersion:Number(p.profileSchemaVersion||0),
     wantsKey:p.wantsKey!==false
   };
   wantsKey=student.wantsKey;
@@ -1104,8 +1118,10 @@ updatePendingRevealShortcut();
 $('showLoginBtn').onclick=showLogin;
 $('showRegisterBtn').onclick=showRegister;
 fillDepartmentSelect();
+fillMajorSelect('');
 $('department').addEventListener('change',()=>{
   fillMajorSelect($('department').value);
+  $('major').focus();
 });
 $('major').addEventListener('change',updateMajorCode);
 $('registerContinueBtn').onclick=registerUser;

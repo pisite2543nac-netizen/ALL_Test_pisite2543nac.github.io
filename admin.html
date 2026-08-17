@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin 20260817-STABLE-CATEGORIZED-V1 | วิทยาลัยเทคนิคนางรอง</title>
+  <title>Admin 20260817-STABLE-CATEGORIZED-V3-SPLIT | วิทยาลัยเทคนิคนางรอง</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -209,7 +209,13 @@
           <select id="newStudentDept"><option value="">-- เลือกแผนก --</option></select>
         </div>
         <div class="field"><label>สาขาวิชา</label>
-          <select id="newStudentMajor" disabled><option value="">-- เลือกสาขาวิชา --</option></select>
+          <select id="newStudentMajor">
+            <option value="">-- เลือกสาขาวิชา --</option>
+            <option value="information-technology">เทคโนโลยีสารสนเทศ (ทส.)</option>
+            <option value="digital-business-technology">เทคโนโลยีธุรกิจดิจิทัล (ทด.)</option>
+            <option value="business-computer">คอมพิวเตอร์ธุรกิจ (คธ.)</option>
+            <option value="electronics">อิเล็กทรอนิกส์ (อิ.)</option>
+          </select>
           <small>รหัสสาขา: <b id="newStudentMajorCode">-</b></small>
         </div>
         <div class="field"><label>รหัสผ่านเริ่มต้นของ User</label><input id="newStudentPassword" type="password" placeholder="อย่างน้อย 6 ตัวอักษร"></div>
@@ -229,42 +235,101 @@
       </div>
     </div>
 
-    <div class="admin-filter-grid admin-filter-grid-wide">
-      <div class="field"><label>ค้นหาเร็ว</label><input id="regSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้น / ห้อง / แผนก / สาขา"></div>
-      <div class="field"><label>รายวิชา</label><select id="regSubjectFilter"></select></div>
-      <div class="field"><label>ระดับชั้น</label><select id="regLevelFilter"></select></div>
-      <div class="field"><label>ห้อง</label><select id="regRoomFilter"></select></div>
-      <div class="field"><label>แผนกวิชา</label><select id="regDeptFilter"></select></div>
-      <div class="field"><label>สาขาวิชา</label><select id="regMajorFilter"></select></div>
-      <div class="field"><label>สถานะ</label>
-        <select id="regStatusFilter">
-          <option value="">ทุกสถานะ</option>
-          <option value="registered">ลงทะเบียนแล้ว</option>
-          <option value="exam_started">กำลังสอบ</option>
-          <option value="completed">ส่งข้อสอบแล้ว</option>
-          <option value="terminated">ยุติการสอบ</option>
-        </select>
+    <div class="user-dataset-summary">
+      <div class="dataset-summary-card new">
+        <span>USER ชุดใหม่</span>
+        <strong id="newUserTotal">0</strong>
+        <small>ข้อมูลจัดหมวดหมู่ Level / Room / Department / Major</small>
+      </div>
+      <div class="dataset-summary-card legacy">
+        <span>USER ชุดเก่า</span>
+        <strong id="legacyUserTotal">0</strong>
+        <small>ข้อมูลเดิมถูกเก็บไว้ตามรูปแบบเดิม ไม่ทำ Migration</small>
       </div>
     </div>
 
-    <div class="row space list-counter">
-      <span class="muted">รายการที่แสดง</span><b id="visibleUserCount">0</b>
+    <div class="notice compact-note admin-category-notice">
+      <b>การแยกชุดข้อมูล:</b>
+      ระบบจะไม่แก้ไขข้อมูลนักศึกษาเก่าโดยอัตโนมัติ ผู้สมัครใหม่และ User ที่ Admin สร้างใหม่จะถูกเก็บในรูปแบบจัดหมวดหมู่
+      และแสดงแยกจาก User ชุดเก่าอย่างชัดเจน
     </div>
 
-    <div class="notice compact-note admin-category-notice">
-      <b>ระบบจัดหมวดหมู่ User:</b> รายการผู้ใช้จะแสดง 1 บัญชีต่อ 1 แถว และกรองได้แยกตามระดับชั้น ห้อง แผนก และสาขาวิชา
+    <div class="dataset-panel categorized-users">
+      <div class="row space dataset-heading">
+        <div>
+          <div class="kicker">CATEGORIZED USERS</div>
+          <h3>User ชุดใหม่ · จัดหมวดหมู่</h3>
+          <div class="muted">กรองตามระดับชั้น ห้อง แผนก และสาขาวิชาได้โดยตรง</div>
+        </div>
+        <span class="dataset-badge new">ชุดใหม่ <b id="visibleNewUserCount">0</b></span>
+      </div>
+
+      <div class="admin-filter-grid admin-filter-grid-wide">
+        <div class="field"><label>ค้นหาเร็ว</label><input id="regSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้น / ห้อง / แผนก / สาขา"></div>
+        <div class="field"><label>รายวิชาล่าสุด</label><select id="regSubjectFilter"></select></div>
+        <div class="field"><label>ระดับชั้น</label><select id="regLevelFilter"></select></div>
+        <div class="field"><label>ห้อง</label><select id="regRoomFilter"></select></div>
+        <div class="field"><label>แผนกวิชา</label><select id="regDeptFilter"></select></div>
+        <div class="field"><label>สาขาวิชา</label><select id="regMajorFilter"></select></div>
+        <div class="field"><label>สถานะ</label>
+          <select id="regStatusFilter">
+            <option value="">ทุกสถานะ</option>
+            <option value="registered">ลงทะเบียนแล้ว</option>
+            <option value="exam_started">กำลังสอบ</option>
+            <option value="completed">ส่งข้อสอบแล้ว</option>
+            <option value="terminated">ยุติการสอบ</option>
+            <option value="forfeited">สละสิทธิ์สอบ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ล่าสุด</th><th>วิชาล่าสุด</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ระดับ</th><th>ห้อง</th><th>แผนก</th><th>สาขา</th><th>รหัส</th><th>สถานะ</th><th>จัดการ</th></tr>
+          </thead>
+          <tbody id="regRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="dataset-panel legacy-users">
+      <div class="row space dataset-heading">
+        <div>
+          <div class="kicker">LEGACY USERS</div>
+          <h3>User ชุดเก่า · ข้อมูลเดิม</h3>
+          <div class="muted">เก็บ className / department ตามข้อมูลเดิม ไม่เพิ่มหรือแก้สาขาให้เอง</div>
+        </div>
+        <span class="dataset-badge legacy">ชุดเก่า <b id="visibleLegacyUserCount">0</b></span>
+      </div>
+
+      <div class="admin-filter-grid">
+        <div class="field"><label>ค้นหาข้อมูลเดิม</label><input id="legacyUserSearch" placeholder="ชื่อ / เลขนักศึกษา / ชั้นเดิม / แผนกเดิม"></div>
+        <div class="field"><label>รายวิชาล่าสุด</label><select id="legacySubjectFilter"></select></div>
+        <div class="field"><label>สถานะ</label>
+          <select id="legacyStatusFilter">
+            <option value="">ทุกสถานะ</option>
+            <option value="registered">ลงทะเบียนแล้ว</option>
+            <option value="exam_started">กำลังสอบ</option>
+            <option value="completed">ส่งข้อสอบแล้ว</option>
+            <option value="terminated">ยุติการสอบ</option>
+            <option value="forfeited">สละสิทธิ์สอบ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ล่าสุด</th><th>วิชาล่าสุด</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ชั้น/ห้องเดิม</th><th>แผนกเดิม</th><th>สถานะ</th><th>จัดการ</th></tr>
+          </thead>
+          <tbody id="legacyUserRows"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="notice compact-note">
-      ปุ่ม “ลบ User” จะลบโปรไฟล์ <b>studentUsers</b> และรายการเช็กอินของ User ทำให้บัญชีนั้นเข้าใช้งานระบบสอบไม่ได้อีก
-      แต่จะเก็บผลสอบเดิมไว้เป็นหลักฐาน
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>ล่าสุด</th><th>วิชาล่าสุด</th><th>เลขนักศึกษา</th><th>ชื่อ</th><th>ระดับ</th><th>ห้อง</th><th>แผนก</th><th>สาขา</th><th>รหัส</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-        <tbody id="regRows"></tbody>
-      </table>
+      ปุ่ม “ลบ User” จะลบโปรไฟล์ <b>studentUsers</b> และรายการเช็กอินของ User แต่ผลสอบเดิมใน submissions จะยังถูกเก็บไว้
     </div>
   </section>
 
@@ -382,7 +447,7 @@
 </section>
 
 </main>
-<script type="module" src="admin.js?v=20260817-STABLE-CATEGORIZED-V1"></script>
-<div id="systemVersionBadge" class="system-version-badge">Admin 20260817-STABLE-CATEGORIZED-V1</div>
+<script type="module" src="admin.js?v=20260817-STABLE-CATEGORIZED-V3-SPLIT"></script>
+<div id="systemVersionBadge" class="system-version-badge">Admin 20260817-STABLE-CATEGORIZED-V3-SPLIT</div>
 </body>
 </html>
