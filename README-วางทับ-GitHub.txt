@@ -199,3 +199,12 @@ REQUEST SCORE / RETAKE / FULLSCREEN GUARD
 - status=forfeited
 - นับเป็นการใช้สิทธิ์สอบ 1 ครั้ง
 - ไม่มีเฉลยสำหรับรอบที่สละสิทธิ์
+
+
+EXAM START FIX
+- แก้ปัญหากด "เริ่มทำข้อสอบ" แล้วขึ้น permission-denied
+- รองรับ registrations เก่าที่ถูกสร้างก่อนระบบ User Auth และยังไม่มี ownerUid
+- นับ examAttempts + สร้าง registrations ใน Firestore Transaction เดียว
+- หาก Firestore ปฏิเสธ Registration จะไม่เสียสิทธิ์สอบ
+- ต้อง Publish firestore_rules_EXAM_START_FIX.rules
+- หลัง Publish รอประมาณ 1 นาที และกด Ctrl+F5 ที่หน้าเว็บ

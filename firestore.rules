@@ -178,9 +178,19 @@ service cloud.firestore {
         isAdmin()
         || (
           signedIn()
-          && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && validRegistration()
+          && (
+            // Current authenticated registration owned by this User
+            resource.data.ownerUid == request.auth.uid
+
+            // Migration path for registration documents created by
+            // older/anonymous versions before ownerUid existed.
+            || (
+              resource.data.studentId == request.resource.data.studentId
+              && resource.data.subjectId == request.resource.data.subjectId
+            )
+          )
         )
         || (
           request.auth == null

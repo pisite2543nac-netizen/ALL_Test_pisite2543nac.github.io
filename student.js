@@ -355,6 +355,76 @@ async function loadAttemptStates(){
   attemptStateMap=new Map(rows);
 }
 
+async function createAttemptAndRegistration(subject){
+  const uid=studentAuth.currentUser?.uid;
+  if(!uid)throw new Error('ไม่พบข้อมูลบัญชีผู้เข้าสอบ');
+
+  // deterministic registration id remains compatible with existing system
+  const regId=await sha256(`${subject.id}::${student.studentId}`);
+  const attemptRef=doc(studentDb,'examAttempts',`${uid}__${subject.id}`);
+  const regRef=doc(studentDb,'registrations',regId);
+  const newAttemptToken=randomToken();
+
+  const result=await runTransaction(studentDb,async tx=>{
+    const attemptSnap=await tx.get(attemptRef);
+    const old=attemptSnap.exists()?attemptSnap.data():{};
+    const used=Number(old.attemptsUsed||0);
+    const terminated=Number(old.terminatedCount||0);
+
+    if(used>=MAX_ATTEMPTS_PER_SUBJECT){
+      const err=new Error('⛔ ยุติสิทธิ์การสอบรายวิชานี้ทันที เนื่องจากใช้สิทธิ์ครบ 2 ครั้ง กรุณาติดต่อ Admin เพื่อขอสิทธิ์สอบใหม่');
+      err.code='attempt-limit';
+      throw err;
+    }
+
+    const next=used+1;
+    const attemptData={
+      ownerUid:uid,
+      studentId:student.studentId,
+      subjectId:subject.id,
+      subjectCode:subject.code,
+      subjectName:subject.name,
+      attemptsUsed:next,
+      terminatedCount:terminated,
+      maxAttempts:MAX_ATTEMPTS_PER_SUBJECT,
+      updatedAt:serverTimestamp(),
+      updatedAtClient:new Date().toISOString()
+    };
+    if(!attemptSnap.exists()){
+      attemptData.createdAt=serverTimestamp();
+      attemptData.createdAtClient=new Date().toISOString();
+    }
+
+    const registrationData={
+      ...student,
+      ownerUid:uid,
+      subjectId:subject.id,
+      subjectCode:subject.code,
+      subjectName:subject.name,
+      attemptToken:newAttemptToken,
+      attemptNumber:next,
+      maxAttempts:MAX_ATTEMPTS_PER_SUBJECT,
+      registeredAt:serverTimestamp(),
+      registeredAtClient:new Date().toISOString(),
+      status:'started',
+      wantsKey
+    };
+
+    // ทั้งสองรายการสำเร็จพร้อมกัน หรือยกเลิกพร้อมกัน
+    tx.set(attemptRef,attemptData,{merge:true});
+    tx.set(regRef,registrationData,{merge:false});
+
+    return {registrationId:regId,attemptToken:newAttemptToken,attemptsUsed:next,terminatedCount:terminated};
+  });
+
+  attemptToken=result.attemptToken;
+  attemptStateMap.set(subject.id,{
+    attemptsUsed:result.attemptsUsed,
+    terminatedCount:result.terminatedCount
+  });
+  return result;
+}
+
 async function reserveAttempt(subject){
   const uid=studentAuth.currentUser?.uid;
   if(!uid)throw new Error('ไม่พบข้อมูลบัญชีผู้เข้าสอบ');
@@ -680,11 +750,11 @@ async function beginExamFromInstructions(){
   $('instructionBackBtn').disabled=true;
 
   try{
-    // นับสิทธิ์เมื่อกดเริ่มทำข้อสอบจริงเท่านั้น
-    currentAttemptNumber=await reserveAttempt(selectedSubject);
-
-    // สร้างสิทธิ์การสอบเมื่อผู้เรียนกดเริ่มจริง
-    registrationId=await registerAttempt();
+    // นับสิทธิ์ + สร้าง Registration ใน Transaction เดียว
+    // ถ้าขั้นใดไม่สำเร็จ จะไม่หักสิทธิ์สอบ
+    const startResult=await createAttemptAndRegistration(selectedSubject);
+    currentAttemptNumber=startResult.attemptsUsed;
+    registrationId=startResult.registrationId;
     await updateStudentCheckinForSubject();
   }catch(e){
     console.error(e);
@@ -697,7 +767,7 @@ async function beginExamFromInstructions(){
       return;
     }
     if(e?.code==='permission-denied'){
-      showMsg('instructionMsg','เริ่มสอบไม่สำเร็จ: กรุณา Publish Firestore Rules เวอร์ชันล่าสุดที่รองรับ examAttempts');
+      showMsg('instructionMsg','เริ่มสอบไม่สำเร็จ: Firestore ปฏิเสธสิทธิ์ examAttempts/registrations กรุณา Publish Rules ชุด EXAM START FIX ที่ให้มาพร้อมไฟล์เว็บ');
       return;
     }
     showMsg('instructionMsg',e?.message||'ไม่สามารถเริ่มสอบได้ กรุณาลองใหม่');
